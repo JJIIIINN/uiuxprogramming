@@ -2,7 +2,8 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <title>Re:hear</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>초록집사 - 식물 초보를 위한 반려식물 돌봄 서비스</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,82 +15,134 @@
   </head>
 
   <body>
-    <!-- 
-      사용자: 발표 불안이 있는 사람 
-      목적: 발표 불안을 낮추고 자신감 얻기 
-      핵심 행동: 발표 세션 설정하기 
-      정보 순서: 소개→기능→방법→세션 설정 
-      -->
+    <!--
+      서비스명: 초록집사
+      사용자: 식물을 처음 키우는 자취생·직장인, 물 주는 시기를 자주 놓치는 사람
+      목적: 반려식물을 시들게 하지 않고 건강하게 키우기
+      핵심 행동: 내 식물을 등록하고 물주기 알림 받기
+      정보 순서: 소개 → 주요 기능 → 이용 방법 → 알림 신청
+    -->
 
     <header>
-      <h1>발표 훈련 서비스</h1>
-      <p>반복적인 연습으로 발표 불안을 줄이고, 자신감을 기릅니다.</p>
+      <div class="topbar">
+        <a class="brand" href="#">초록집사</a>
+        <nav aria-label="주요 메뉴">
+          <a href="#about">서비스 소개</a>
+          <a href="#features">주요 기능</a>
+          <a href="#steps">이용 방법</a>
+          <a href="#subscribe">알림 신청</a>
+        </nav>
+      </div>
 
-      <nav aria-label="주요 메뉴">
-        <a href="#about">서비스 소개</a>
-        <a href="#features">훈련 기능</a>
-        <a href="#steps">이용 방법</a>
-        <a href="#subscribe">훈련 소식 받기</a>
-      </nav>
+      <div class="hero">
+        <h1>식물 초보도<br />물 줄 날을 놓치지 않게</h1>
+        <p class="tagline">
+          식물 종류와 놓아둔 자리에 맞춰 물 주는 날을 알려 주고,
+          잎 사진으로 건강 상태를 진단해 드립니다.
+        </p>
+        <a class="hero-cta" href="#subscribe">물주기 알림 받기</a>
+      </div>
     </header>
 
     <main>
       <section id="about">
         <h2>서비스 소개</h2>
-        <h3>안전한 환경에서 반복하는 발표 연습</h3>
+        <h3>처음 키우는 식물도 시들지 않게 돌보는 방법</h3>
 
         <img
-          src="assets/images/service.png"
-          alt="가상 청중 앞에서 발표를 연습하는 사용자"
+          src="assets/images/images.jpeg"
+          alt="창가에 놓인 몬스테라 화분 옆에 '물 주는 날: 내일 오전 9시' 알림 카드와 '잎 상태 좋아요' 진단 카드가 떠 있는 그림"
         />
 
-        <p>가상 청중 앞에서 발표를 연습할 수 있는 안전한 환경을 제공합니다.</p>
         <p>
-          연습이 끝나면 발표 결과를 확인하고 개선할 부분을 파악할 수 있습니다.
+          초록집사는 식물을 처음 키우는 자취생과 직장인을 위한 반려식물 돌봄
+          서비스입니다.
+        </p>
+        <p>
+          물을 너무 자주 주거나 너무 오래 잊는 일이 없도록 식물마다 알맞은
+          물주기 일정을 계산해 알려 주고, 잎 사진으로 건강 상태를 확인해
+          드립니다.
         </p>
       </section>
 
       <section id="features">
-        <h2>훈련 기능</h2>
+        <h2>주요 기능</h2>
         <ul class="features-list">
           <li class="feature-card">
-            <h3>단계별 발표 연습</h3>
-            <p>연습한 발표 상황을 선택하고 반복해서 연습합니다.</p>
+            <h3>물주기 알림</h3>
+            <p>
+              식물 종류, 화분 크기, 계절에 맞춰 물 줄 날을 계산하고 아침에
+              알려 줍니다. 물을 준 뒤 완료 버튼만 누르면 다음 일정이 자동으로
+              잡힙니다.
+            </p>
           </li>
           <li class="feature-card">
-            <h3>가상 청중 연습</h3>
-            <p>가상 청중 앞에서 발표를 연습하고, 청중의 반응을 확인합니다.</p>
+            <h3>사진 진단</h3>
+            <p>
+              잎 사진을 올리면 과습, 빛 부족, 해충처럼 초보가 자주 겪는 문제를
+              짚어 주고 지금 해야 할 일을 한 줄로 알려 줍니다.
+            </p>
           </li>
           <li class="feature-card">
-            <h3>발표 피드백</h3>
-            <p>발표 후, AI가 제공하는 피드백을 통해 개선점을 확인합니다.</p>
+            <h3>성장 일지</h3>
+            <p>
+              사진과 짧은 메모를 날짜별로 남겨 식물이 자라는 모습을 한눈에
+              봅니다. 물 준 기록도 함께 쌓여 관리 습관을 돌아볼 수 있습니다.
+            </p>
           </li>
         </ul>
       </section>
 
       <section id="steps">
         <h2>이용 방법</h2>
-        <ol>
-          <li>회원가입 및 로그인</li>
-          <li>원하는 발표 주제를 선택합니다.</li>
-          <li>단계별 발표 연습을 시작합니다.</li>
-          <li>가상 청중 앞에서 발표를 연습합니다.</li>
-          <li>AI가 제공하는 피드백을 확인하고 개선합니다.</li>
+        <ol class="steps-list">
+          <li>회원가입 후 키우는 식물의 이름과 종류를 등록합니다.</li>
+          <li>화분 크기와 식물을 놓아둔 자리(창가, 실내, 베란다)를 선택합니다.</li>
+          <li>물 주는 날 아침에 알림을 받고, 물을 준 뒤 완료 버튼을 누릅니다.</li>
+          <li>잎 색이나 모양이 이상하면 사진을 찍어 진단을 받습니다.</li>
+          <li>성장 일지에 사진과 메모를 남기며 식물의 변화를 확인합니다.</li>
         </ol>
       </section>
 
       <section id="subscribe" class="subscribe-card">
-        <h2>훈련 소식 받기</h2>
+        <h2>물주기 알림 신청</h2>
+        <p>
+          내 식물 이름과 이메일을 남기면 첫 물주기 일정을 메일로 보내
+          드립니다.
+        </p>
         <form>
-          <label for="email">이메일</label>
-          <input type="email" id="email" name="email" />
-          <button type="submit">훈련 소식 신청하기</button>
+          <div class="field">
+            <label for="plant-name">식물 이름</label>
+            <input
+              type="text"
+              id="plant-name"
+              name="plant-name"
+              placeholder="예: 몬스테라 몽이"
+              autocomplete="off"
+              required
+            />
+          </div>
+          <div class="field">
+            <label for="email">이메일 주소</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              placeholder="green@example.com"
+              autocomplete="email"
+              required
+            />
+          </div>
+          <button type="submit">물주기 알림 받기</button>
         </form>
+        <p class="form-note">
+          알림은 일주일에 한 번 이하로 보내며, 언제든지 취소할 수 있습니다.
+        </p>
       </section>
     </main>
 
     <footer>
-      <small>© 2026 발표 훈련 서비스</small>
+      <small>© 2026 초록집사. 식물 초보를 위한 반려식물 돌봄 서비스</small>
     </footer>
   </body>
 </html>
