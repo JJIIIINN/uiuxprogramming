@@ -12,6 +12,9 @@
   --blue-600: #1b64da;
   --blue-700: #1957c2;
   --blue-100: #e8f3ff;
+  --red-500: #f04452;
+  --red-600: #d22030;
+  --red-50: #ffeeee;
   --white: #ffffff;
 }
 
@@ -291,6 +294,7 @@ input::placeholder {
 }
 
 button {
+  min-width: 168px; /* 버튼 문구가 바뀌어도 너비 유지 */
   padding: 14px 22px;
   border: 0;
   border-radius: 12px;
@@ -333,6 +337,50 @@ nav a:focus-visible {
   margin: 16px 0 0;
   font-size: 14px;
   color: var(--grey-500);
+}
+
+/* 신청 결과 안내 */
+.subscribe-card .form-message {
+  margin: 16px 0 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.subscribe-card .form-message:empty {
+  display: none;
+}
+
+.form-message.error {
+  color: var(--red-600);
+  background-color: var(--red-50);
+}
+
+.form-message.success {
+  color: var(--blue-700);
+  background-color: var(--blue-100);
+}
+
+input.is-invalid,
+input.is-invalid:focus {
+  border-color: var(--red-500);
+}
+
+input.is-invalid:focus {
+  box-shadow: 0 0 0 3px rgba(240, 68, 82, 0.2);
+}
+
+button:disabled,
+button:disabled:hover,
+button:disabled:active {
+  color: var(--grey-700);
+  background-color: var(--grey-300);
+  cursor: default;
+  transform: none;
 }
 
 /* 푸터 */
