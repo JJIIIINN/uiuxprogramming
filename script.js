@@ -12,6 +12,29 @@ function formatDate(date) {
   );
 }
 
+// 식물별 기본 물주기 간격(일)과 자리별 보정 비율
+const waterDays = {
+  monstera: 7,
+  scindapsus: 5,
+  fern: 3,
+  succulent: 14,
+  stuckyi: 21,
+  foliage: 7,
+};
+const placeRatio = { window: 0.8, veranda: 1, room: 1.2 };
+
+// 식물 종류와 자리로 물주기 간격(일) 계산 (탭 체험과 신청 흐름에서 함께 사용)
+function getWaterInterval(plant, place) {
+  return Math.round(waterDays[plant] * placeRatio[place]);
+}
+
+// 오늘부터 며칠 뒤의 날짜 구하기
+function getDateAfter(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date;
+}
+
 /* 1. 주요 기능 탭 */
 const tabs = document.querySelectorAll('.tab');
 const tabPanels = document.querySelectorAll('.tab-panel');
@@ -42,10 +65,6 @@ const placeSelect = document.querySelector('#plant-place');
 const waterButton = document.querySelector('#water-button');
 const waterResult = document.querySelector('#water-result');
 
-// 식물별 기본 물주기 간격(일)과 자리별 보정 비율
-const waterDays = { monstera: 7, scindapsus: 5, fern: 3, succulent: 14, stuckyi: 21 };
-const placeRatio = { window: 0.8, veranda: 1, room: 1.2 };
-
 let waterInterval = 0;
 
 // 식물 종류나 자리를 바꾸면 물주기 간격 다시 계산
@@ -61,7 +80,7 @@ function updateWaterPlan() {
     return;
   }
 
-  waterInterval = Math.round(waterDays[plant] * placeRatio[place]);
+  waterInterval = getWaterInterval(plant, place);
   waterButton.disabled = false;
   showMessage(
     waterResult,
@@ -72,8 +91,7 @@ function updateWaterPlan() {
 
 // 물 준 날을 기록하고 다음 물주기 날짜 안내
 function handleWater() {
-  const nextDate = new Date();
-  nextDate.setDate(nextDate.getDate() + waterInterval);
+  const nextDate = getDateAfter(waterInterval);
 
   waterButton.textContent = '물주기 완료';
   waterButton.disabled = true;
@@ -169,63 +187,200 @@ function addDiary() {
 memoInput.addEventListener('input', handleMemoInput);
 diaryButton.addEventListener('click', addDiary);
 
-/* 5. 물주기 알림 신청 폼 */
-const form = document.querySelector('#subscribe-form');
-const plantInput = document.querySelector('#plant-name');
-const emailInput = document.querySelector('#email');
-const submitButton = document.querySelector('#subscribe-button');
-const formMessage = document.querySelector('#form-message');
+/* 5. 물주기 알림 신청 흐름: 시작 → 내 식물 → 알림 받기 → 확인 → 완료 */
+const signupForm = document.querySelector('#signup-form');
+const flowSteps = document.querySelectorAll('.flow-step');
+const progressItems = document.querySelectorAll('.flow-progress li');
 
-const buttonText = '물주기 알림 받기';
+const signupName = document.querySelector('#signup-name');
+const signupType = document.querySelector('#signup-type');
+const signupPlace = document.querySelector('#signup-place');
+const signupEmail = document.querySelector('#signup-email');
+const signupTime = document.querySelector('#signup-time');
+const signupAgree = document.querySelector('#signup-agree');
+const restartButton = document.querySelector('#restart-button');
 
-// 입력칸을 오류 상태로 표시하고 커서 이동
-function markInvalid(input) {
-  input.classList.add('is-invalid');
-  input.focus();
+const summaryName = document.querySelector('#summary-name');
+const summaryType = document.querySelector('#summary-type');
+const summaryPlace = document.querySelector('#summary-place');
+const summaryInterval = document.querySelector('#summary-interval');
+const summaryEmail = document.querySelector('#summary-email');
+const summaryTime = document.querySelector('#summary-time');
+const summaryFirst = document.querySelector('#summary-first');
+const doneMessage = document.querySelector('#done-message');
+
+const placeNames = {
+  window: '햇빛 드는 창가',
+  veranda: '바람 통하는 베란다',
+  room: '빛이 적은 방 안',
+};
+const timeNames = { morning: '아침 8시', noon: '낮 12시', evening: '저녁 8시' };
+
+const confirmStep = 3;
+const doneStep = 4;
+let currentStep = 0;
+
+// 라디오 버튼 묶음에서 고른 값 (고르지 않았으면 빈 문자열)
+function getChecked(group) {
+  const checked = group.querySelector('input:checked');
+  if (checked === null) {
+    return '';
+  }
+  return checked.value;
 }
 
-// 폼 제출 시 입력값 확인
-function handleSubmit(event) {
+// 해당 단계 화면만 보이고 진행 표시 갱신
+function showStep(step) {
+  currentStep = step;
+
+  flowSteps.forEach(function (panel, index) {
+    panel.hidden = index !== step;
+  });
+
+  progressItems.forEach(function (item, index) {
+    const itemStep = index + 1;
+    item.classList.toggle('is-done', itemStep < step || step === doneStep);
+    item.classList.toggle('is-current', itemStep === step && step !== doneStep);
+
+    if (itemStep === step) {
+      item.setAttribute('aria-current', 'step');
+    } else {
+      item.removeAttribute('aria-current');
+    }
+  });
+
+  flowSteps[step].querySelector('h3').focus();
+}
+
+// 항목 아래에 고치는 방법 안내 (message가 빈 문자열이면 오류 지우기)
+function setFieldError(control, message) {
+  const field = control.closest('.flow-field');
+  field.classList.toggle('is-invalid', message !== '');
+  field.querySelector('.field-error').textContent = message;
+}
+
+// 값이 비어 있으면 오류 안내, 있으면 오류 지우기
+function requireValue(control, value, message) {
+  if (value === '') {
+    setFieldError(control, message);
+  } else {
+    setFieldError(control, '');
+  }
+}
+
+// 현재 단계의 필수 입력·선택 확인 (빠진 항목이 있으면 false)
+function validateStep(step) {
+  if (step === 1) {
+    requireValue(signupName, signupName.value.trim(), '식물 이름을 입력해 주세요. 예: 몬스테라 몽이');
+    requireValue(signupType, signupType.value, '식물 종류를 골라 주세요. 목록에 없으면 기타 관엽식물을 골라 주세요.');
+    requireValue(signupPlace, getChecked(signupPlace), '식물을 놓아둔 자리를 하나 골라 주세요.');
+  }
+
+  if (step === 2) {
+    const email = signupEmail.value.trim();
+
+    if (email === '') {
+      setFieldError(signupEmail, '알림 받을 이메일 주소를 입력해 주세요.');
+    } else if (!signupEmail.checkValidity() || !email.includes('.')) {
+      setFieldError(signupEmail, '이메일 주소 형식을 확인해 주세요. 예: green@example.com');
+    } else {
+      setFieldError(signupEmail, '');
+    }
+
+    requireValue(signupTime, getChecked(signupTime), '알림 받을 시간을 하나 골라 주세요.');
+  }
+
+  if (step === confirmStep) {
+    if (signupAgree.checked) {
+      setFieldError(signupAgree, '');
+    } else {
+      setFieldError(signupAgree, '알림 메일을 받으려면 수신 동의에 체크해 주세요.');
+    }
+  }
+
+  // 빠진 항목이 있으면 첫 번째 항목으로 커서 이동
+  const firstError = flowSteps[step].querySelector('.flow-field.is-invalid');
+  if (firstError !== null) {
+    firstError.querySelector('input, select').focus();
+    return false;
+  }
+  return true;
+}
+
+// 지금 입력·선택된 값으로 확인 화면 채우기
+function fillSummary() {
+  const plant = signupType.value;
+  const place = getChecked(signupPlace);
+  const time = getChecked(signupTime);
+  const interval = getWaterInterval(plant, place);
+
+  summaryName.textContent = signupName.value.trim();
+  summaryType.textContent = signupType.options[signupType.selectedIndex].text;
+  summaryPlace.textContent = placeNames[place];
+  summaryInterval.textContent = interval + '일마다';
+  summaryEmail.textContent = signupEmail.value.trim();
+  summaryTime.textContent = timeNames[time];
+  summaryFirst.textContent = formatDate(getDateAfter(interval)) + ' ' + timeNames[time];
+}
+
+// 다음·알림 신청하기 버튼(또는 Enter)으로 제출했을 때
+function handleFlowSubmit(event) {
   event.preventDefault();
 
-  const plantName = plantInput.value.trim();
-  const email = emailInput.value.trim();
-
-  if (plantName === '') {
-    showMessage(formMessage, '어떤 식물을 키우는지 이름을 알려 주세요.', 'error');
-    markInvalid(plantInput);
+  if (!validateStep(currentStep)) {
     return;
   }
 
-  if (email === '') {
-    showMessage(formMessage, '일정을 받을 이메일 주소를 입력해 주세요.', 'error');
-    markInvalid(emailInput);
+  if (currentStep === confirmStep) {
+    doneMessage.textContent =
+      summaryName.textContent + '의 첫 물주기 알림을 ' + summaryFirst.textContent +
+      '에 ' + summaryEmail.textContent + ' 주소로 보내 드릴게요.';
+    showStep(doneStep);
     return;
   }
 
-  if (!emailInput.checkValidity() || !email.includes('.')) {
-    showMessage(formMessage, '이메일 주소 형식을 확인해 주세요. 예: green@example.com', 'error');
-    markInvalid(emailInput);
-    return;
+  if (currentStep + 1 === confirmStep) {
+    fillSummary();
   }
-
-  showMessage(
-    formMessage,
-    plantName + '의 첫 물주기 일정을 ' + email + ' 주소로 보내 드릴게요.',
-    'success'
-  );
-  submitButton.textContent = '신청 완료';
-  submitButton.disabled = true;
+  showStep(currentStep + 1);
 }
 
-// 다시 입력하면 오류 표시와 버튼 상태 초기화
-function handleInput(event) {
-  event.target.classList.remove('is-invalid');
-  showMessage(formMessage, '', '');
-  submitButton.textContent = buttonText;
-  submitButton.disabled = false;
+// 시작·이전·수정 버튼: data-goto에 적힌 단계로 이동 (입력값은 그대로 유지)
+function handleFlowClick(event) {
+  const button = event.target.closest('[data-goto]');
+  if (button === null) {
+    return;
+  }
+  showStep(Number(button.dataset.goto));
 }
 
-form.addEventListener('submit', handleSubmit);
-plantInput.addEventListener('input', handleInput);
-emailInput.addEventListener('input', handleInput);
+// 오류가 표시된 항목을 고치면 그 항목의 오류 안내 지우기
+function clearFieldError(event) {
+  const field = event.target.closest('.flow-field');
+  if (field !== null && field.classList.contains('is-invalid')) {
+    setFieldError(event.target, '');
+  }
+}
+
+// 처음부터 다시: 입력·선택·오류·확인 내용·진행 상태 모두 초기화
+function restartSignup() {
+  signupForm.reset();
+
+  signupForm.querySelectorAll('.flow-field').forEach(function (field) {
+    field.classList.remove('is-invalid');
+    field.querySelector('.field-error').textContent = '';
+  });
+
+  signupForm.querySelectorAll('.summary dd').forEach(function (item) {
+    item.textContent = '';
+  });
+  doneMessage.textContent = '';
+
+  showStep(0);
+}
+
+signupForm.addEventListener('submit', handleFlowSubmit);
+signupForm.addEventListener('click', handleFlowClick);
+signupForm.addEventListener('input', clearFieldError);
+signupForm.addEventListener('change', clearFieldError);
+restartButton.addEventListener('click', restartSignup);
