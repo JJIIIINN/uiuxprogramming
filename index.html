@@ -67,30 +67,166 @@
 
       <section id="features">
         <h2>주요 기능</h2>
-        <ul class="features-list">
-          <li class="feature-card">
-            <h3>물주기 알림</h3>
-            <p>
-              식물 종류, 화분 크기, 계절에 맞춰 물 줄 날을 계산하고 아침에
-              알려 줍니다. 물을 준 뒤 완료 버튼만 누르면 다음 일정이 자동으로
-              잡힙니다.
-            </p>
-          </li>
-          <li class="feature-card">
-            <h3>사진 진단</h3>
-            <p>
-              잎 사진을 올리면 과습, 빛 부족, 해충처럼 초보가 자주 겪는 문제를
-              짚어 주고 지금 해야 할 일을 한 줄로 알려 줍니다.
-            </p>
-          </li>
-          <li class="feature-card">
-            <h3>성장 일지</h3>
-            <p>
-              사진과 짧은 메모를 날짜별로 남겨 식물이 자라는 모습을 한눈에
-              봅니다. 물 준 기록도 함께 쌓여 관리 습관을 돌아볼 수 있습니다.
-            </p>
-          </li>
-        </ul>
+        <p>탭을 눌러 초록집사의 세 가지 기능을 직접 써 보세요.</p>
+
+        <div class="tabs" role="tablist" aria-label="주요 기능">
+          <button
+            type="button"
+            class="tab is-active"
+            id="tab-water"
+            role="tab"
+            aria-selected="true"
+            aria-controls="panel-water"
+          >
+            물주기 알림
+          </button>
+          <button
+            type="button"
+            class="tab"
+            id="tab-diagnosis"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panel-diagnosis"
+          >
+            사진 진단
+          </button>
+          <button
+            type="button"
+            class="tab"
+            id="tab-diary"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panel-diary"
+          >
+            성장 일지
+          </button>
+        </div>
+
+        <div
+          class="tab-panel"
+          id="panel-water"
+          role="tabpanel"
+          aria-labelledby="tab-water"
+        >
+          <h3>물주기 알림</h3>
+          <p>
+            식물 종류와 놓아둔 자리에 맞춰 물 줄 날을 계산하고 아침에 알려
+            줍니다. 물을 준 뒤 완료 버튼만 누르면 다음 일정이 자동으로
+            잡힙니다.
+          </p>
+          <div class="controls">
+            <div class="field">
+              <label for="plant-type">식물 종류</label>
+              <select id="plant-type">
+                <option value="">선택해 주세요</option>
+                <option value="monstera">몬스테라</option>
+                <option value="scindapsus">스킨답서스</option>
+                <option value="fern">보스턴고사리</option>
+                <option value="succulent">다육이</option>
+                <option value="stuckyi">스투키</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="plant-place">놓아둔 자리</label>
+              <select id="plant-place">
+                <option value="">선택해 주세요</option>
+                <option value="window">햇빛 드는 창가</option>
+                <option value="veranda">바람 통하는 베란다</option>
+                <option value="room">빛이 적은 방 안</option>
+              </select>
+            </div>
+            <button type="button" class="button" id="water-button" disabled>
+              오늘 물 줬어요
+            </button>
+          </div>
+          <p id="water-result" class="form-message info" aria-live="polite">
+            식물 종류와 놓아둔 자리를 고르면 물주기 간격을 알려 드려요.
+          </p>
+        </div>
+
+        <div
+          class="tab-panel"
+          id="panel-diagnosis"
+          role="tabpanel"
+          aria-labelledby="tab-diagnosis"
+          hidden
+        >
+          <h3>사진 진단</h3>
+          <p>
+            잎 사진을 올리면 과습, 빛 부족, 해충처럼 초보가 자주 겪는 문제를
+            짚어 주고 지금 해야 할 일을 한 줄로 알려 줍니다. 지금은 잎 상태를
+            골라 미리 진단해 볼 수 있습니다.
+          </p>
+          <fieldset class="choice-group" id="symptom-group">
+            <legend>지금 잎 상태와 가장 비슷한 것을 골라 주세요</legend>
+            <div class="choices">
+              <label class="choice">
+                <input type="radio" name="symptom" value="healthy" />
+                <span>짙은 초록색이고 단단해요</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="symptom" value="yellow" />
+                <span>잎이 노랗게 변해요</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="symptom" value="brown" />
+                <span>잎 끝이 갈색으로 말라요</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="symptom" value="pale" />
+                <span>줄기만 길고 색이 옅어요</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="symptom" value="bugs" />
+                <span>잎 뒤에 하얀 점이 있어요</span>
+              </label>
+            </div>
+          </fieldset>
+          <p id="diagnosis-result" class="form-message info" aria-live="polite">
+            잎 상태를 고르면 지금 해야 할 일을 알려 드려요.
+          </p>
+        </div>
+
+        <div
+          class="tab-panel"
+          id="panel-diary"
+          role="tabpanel"
+          aria-labelledby="tab-diary"
+          hidden
+        >
+          <h3>성장 일지</h3>
+          <p>
+            사진과 짧은 메모를 날짜별로 남겨 식물이 자라는 모습을 한눈에
+            봅니다. 물 준 기록도 함께 쌓여 관리 습관을 돌아볼 수 있습니다.
+          </p>
+          <div class="controls">
+            <div class="field">
+              <div class="field-head">
+                <label for="diary-memo">오늘의 메모</label>
+                <span id="memo-count" class="char-count">0 / 60자</span>
+              </div>
+              <textarea
+                id="diary-memo"
+                rows="3"
+                placeholder="예: 몽이 새 잎이 하나 더 돋았어요"
+              ></textarea>
+            </div>
+            <button type="button" class="button" id="diary-button" disabled>
+              일지에 기록하기
+            </button>
+          </div>
+          <p id="diary-message" class="form-message" aria-live="polite"></p>
+          <ul id="diary-list" class="diary-list">
+            <li>
+              <span class="diary-date">10월 5일(월)</span>
+              <span>몽이 분갈이 완료. 한 치수 큰 화분으로 옮겼어요.</span>
+            </li>
+            <li>
+              <span class="diary-date">9월 28일(월)</span>
+              <span>처음으로 갈라진 잎이 돋았어요!</span>
+            </li>
+          </ul>
+        </div>
       </section>
 
       <section id="steps">
@@ -133,7 +269,9 @@
               required
             />
           </div>
-          <button type="submit" id="subscribe-button">물주기 알림 받기</button>
+          <button type="submit" class="button" id="subscribe-button">
+            물주기 알림 받기
+          </button>
         </form>
         <p id="form-message" class="form-message" aria-live="polite"></p>
         <p class="form-note">

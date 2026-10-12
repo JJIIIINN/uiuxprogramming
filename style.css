@@ -15,6 +15,8 @@
   --red-500: #f04452;
   --red-600: #d22030;
   --red-50: #ffeeee;
+  --orange-700: #9a4d00;
+  --orange-50: #fff3e0;
   --white: #ffffff;
 }
 
@@ -186,30 +188,158 @@ img {
   background-color: var(--grey-100);
 }
 
-/* 기능 카드 */
-.features-list {
-  list-style-type: none;
-  padding-left: 0;
-  margin: 32px 0 0;
+/* 기능 탭 */
+.tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.feature-card {
-  padding: 28px 24px;
-  border-radius: 20px;
-  background-color: var(--grey-50);
-  transition: background-color 0.15s;
-}
-
-.feature-card:hover {
+  gap: 4px;
+  max-width: 480px;
+  margin: 32px 0 16px;
+  padding: 4px;
+  border-radius: 14px;
   background-color: var(--grey-100);
 }
 
-.feature-card p {
-  margin: 0;
+.tab {
+  padding: 10px 8px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--grey-600);
+  background-color: transparent;
   font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.tab:hover {
+  color: var(--grey-900);
+}
+
+.tab.is-active {
+  color: var(--blue-600);
+  background-color: var(--white);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.tab-panel {
+  padding: 32px;
+  border-radius: 20px;
+  background-color: var(--grey-50);
+  word-break: keep-all;
+}
+
+.tab-panel h3 + p {
+  max-width: 680px;
+  margin-bottom: 24px;
+}
+
+/* 잎 상태 선택 */
+.choice-group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choice-group legend {
+  margin-bottom: 12px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--grey-600);
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choice {
+  position: relative;
+}
+
+.choice input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+}
+
+.choice span {
+  display: inline-block;
+  padding: 10px 16px;
+  border: 1px solid var(--grey-200);
+  border-radius: 999px;
+  background-color: var(--white);
+  color: var(--grey-800);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+}
+
+.choice span:hover {
+  border-color: var(--grey-300);
+}
+
+.choice input:checked + span {
+  border-color: var(--blue-500);
+  background-color: var(--blue-100);
+  color: var(--blue-700);
+}
+
+/* 성장 일지 */
+.field-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.char-count {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--grey-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.char-count.is-over {
+  color: var(--red-600);
+}
+
+.diary-list {
+  max-width: 680px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.diary-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid var(--grey-200);
+  color: var(--grey-800);
+  font-size: 16px;
+}
+
+.diary-list li span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.diary-date {
+  flex: none;
+  min-width: 96px;
+  color: var(--grey-500);
+  font-size: 14px;
+  font-weight: 700;
 }
 
 /* 이용 방법 */
@@ -254,11 +384,13 @@ img {
   background-color: var(--grey-100);
 }
 
-.subscribe-card p {
+.subscribe-card h2 + p {
   margin-bottom: 28px;
 }
 
-form {
+/* 입력 요소 공통 */
+form,
+.controls {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
@@ -278,7 +410,9 @@ label {
   color: var(--grey-600);
 }
 
-input {
+input,
+select,
+textarea {
   width: 100%;
   min-width: 0;
   padding: 14px 16px;
@@ -289,11 +423,28 @@ input {
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-input::placeholder {
+select {
+  appearance: none;
+  padding-right: 44px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%238b95a1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 16px;
+  cursor: pointer;
+}
+
+textarea {
+  min-height: 96px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+input::placeholder,
+textarea::placeholder {
   color: var(--grey-500);
 }
 
-button {
+.button {
   min-width: 168px; /* 버튼 문구가 바뀌어도 너비 유지 */
   padding: 14px 22px;
   border: 0;
@@ -306,27 +457,51 @@ button {
 }
 
 input,
+select,
+textarea,
 button {
   font: inherit;
   letter-spacing: -0.01em;
 }
 
-button:hover {
+.button:hover {
   background-color: var(--blue-600);
 }
 
-button:active {
+.button:active {
   background-color: var(--blue-700);
   transform: scale(0.98);
 }
 
-input:focus {
+.button:disabled,
+.button:disabled:hover,
+.button:disabled:active {
+  color: var(--grey-700);
+  background-color: var(--grey-300);
+  cursor: default;
+  transform: none;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
   outline: none;
   border-color: var(--blue-500);
   box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.2);
 }
 
-button:focus-visible,
+.is-invalid,
+.is-invalid:focus {
+  border-color: var(--red-500);
+}
+
+.is-invalid:focus {
+  box-shadow: 0 0 0 3px rgba(240, 68, 82, 0.2);
+}
+
+.button:focus-visible,
+.tab:focus-visible,
+.choice input:focus-visible + span,
 .hero-cta:focus-visible,
 nav a:focus-visible {
   outline: 3px solid rgba(49, 130, 246, 0.4);
@@ -339,8 +514,8 @@ nav a:focus-visible {
   color: var(--grey-500);
 }
 
-/* 신청 결과 안내 */
-.subscribe-card .form-message {
+/* 안내 문구 */
+.form-message {
   margin: 16px 0 0;
   padding: 12px 16px;
   border-radius: 12px;
@@ -351,13 +526,13 @@ nav a:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.subscribe-card .form-message:empty {
+.form-message:empty {
   display: none;
 }
 
-.form-message.error {
-  color: var(--red-600);
-  background-color: var(--red-50);
+.form-message.info {
+  color: var(--grey-700);
+  background-color: var(--grey-100);
 }
 
 .form-message.success {
@@ -365,22 +540,14 @@ nav a:focus-visible {
   background-color: var(--blue-100);
 }
 
-input.is-invalid,
-input.is-invalid:focus {
-  border-color: var(--red-500);
+.form-message.warning {
+  color: var(--orange-700);
+  background-color: var(--orange-50);
 }
 
-input.is-invalid:focus {
-  box-shadow: 0 0 0 3px rgba(240, 68, 82, 0.2);
-}
-
-button:disabled,
-button:disabled:hover,
-button:disabled:active {
-  color: var(--grey-700);
-  background-color: var(--grey-300);
-  cursor: default;
-  transform: none;
+.form-message.error {
+  color: var(--red-600);
+  background-color: var(--red-50);
 }
 
 /* 푸터 */
@@ -458,14 +625,19 @@ footer {
     margin-bottom: 24px;
   }
 
-  /* 기능 카드 한 열 배치 */
-  .features-list {
-    grid-template-columns: 1fr;
+  /* 기능 탭은 화면 너비에 맞춰 늘리기 */
+  .tabs {
+    max-width: none;
     margin-top: 24px;
   }
 
-  .feature-card {
+  .tab-panel {
     padding: 24px 20px;
+  }
+
+  .diary-list li {
+    flex-direction: column;
+    gap: 2px;
   }
 
   .steps-list li {
@@ -479,8 +651,9 @@ footer {
     border-radius: 20px;
   }
 
-  /* 이메일 입력창과 버튼 세로 배치 */
-  form {
+  /* 입력창과 버튼 세로 배치 */
+  form,
+  .controls {
     flex-direction: column;
     align-items: stretch;
   }
@@ -490,7 +663,7 @@ footer {
     width: 100%;
   }
 
-  button,
+  .button,
   .hero-cta {
     width: 100%;
     text-align: center;
