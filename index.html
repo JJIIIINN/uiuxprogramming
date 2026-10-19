@@ -23,6 +23,7 @@
       완료 조건: 식물 이름·종류·자리, 이메일·알림 시간을 모두 입력하고
                  확인 화면에서 수신 동의 후 신청하면 완료 화면 표시
       신청 흐름: 시작 → 내 식물 → 알림 받기 → 확인 → 완료
+      중간고사 추가: 내 식물 단계에서 종류를 모르면 생김새로 찾아 바로 선택
       정보 순서: 소개 → 주요 기능 → 이용 방법 → 알림 신청
     -->
 
@@ -127,6 +128,9 @@
                 <option value="fern">보스턴고사리</option>
                 <option value="succulent">다육이</option>
                 <option value="stuckyi">스투키</option>
+                <option value="rubber">고무나무</option>
+                <option value="spathiphyllum">스파티필름</option>
+                <option value="cactus">선인장</option>
                 <option value="foliage">기타 관엽식물</option>
               </select>
             </div>
@@ -236,7 +240,10 @@
       <section id="steps">
         <h2>이용 방법</h2>
         <ol class="steps-list">
-          <li>회원가입 후 키우는 식물의 이름과 종류를 등록합니다.</li>
+          <li>
+            키우는 식물의 이름과 종류를 등록합니다. 종류를 모르면 잎
+            생김새로 찾을 수 있습니다.
+          </li>
           <li>화분 크기와 식물을 놓아둔 자리(창가, 실내, 베란다)를 선택합니다.</li>
           <li>물 주는 날 아침에 알림을 받고, 물을 준 뒤 완료 버튼을 누릅니다.</li>
           <li>잎 색이나 모양이 이상하면 사진을 찍어 진단을 받습니다.</li>
@@ -296,9 +303,83 @@
                   <option value="fern">보스턴고사리</option>
                   <option value="succulent">다육이</option>
                   <option value="stuckyi">스투키</option>
+                  <option value="rubber">고무나무</option>
+                  <option value="spathiphyllum">스파티필름</option>
+                  <option value="cactus">선인장</option>
                   <option value="foliage">기타 관엽식물</option>
                 </select>
                 <p class="field-error"></p>
+                <p id="type-note" class="field-note" aria-live="polite"></p>
+                <button
+                  type="button"
+                  class="finder-toggle"
+                  id="finder-toggle"
+                  aria-expanded="false"
+                  aria-controls="plant-finder"
+                >
+                  종류를 모르겠어요 · 생김새로 찾기
+                </button>
+              </div>
+
+              <!-- 중간고사 추가: 종류를 모를 때 생김새로 식물 찾기 -->
+              <div
+                class="finder wide"
+                id="plant-finder"
+                role="group"
+                aria-labelledby="finder-title"
+                hidden
+              >
+                <div class="finder-head">
+                  <h4 id="finder-title">생김새로 식물 찾기</h4>
+                  <button type="button" class="finder-close" id="finder-close">
+                    닫기
+                  </button>
+                </div>
+                <div class="finder-field">
+                  <label for="finder-input">식물 이름이나 잎·줄기 생김새</label>
+                  <div class="finder-search">
+                    <input
+                      type="search"
+                      id="finder-input"
+                      placeholder="예: 구멍 난 잎"
+                      autocomplete="off"
+                    />
+                    <button type="button" class="button" id="finder-button">
+                      찾기
+                    </button>
+                  </div>
+                  <p id="finder-error" class="field-error"></p>
+                </div>
+                <div class="finder-examples">
+                  <span>이렇게 찾아보세요</span>
+                  <button type="button" class="keyword" data-keyword="구멍 난 잎">
+                    구멍 난 잎
+                  </button>
+                  <button type="button" class="keyword" data-keyword="덩굴">
+                    덩굴
+                  </button>
+                  <button type="button" class="keyword" data-keyword="통통한 잎">
+                    통통한 잎
+                  </button>
+                  <button type="button" class="keyword" data-keyword="하얀 꽃">
+                    하얀 꽃
+                  </button>
+                  <button type="button" class="keyword" data-keyword="가시">
+                    가시
+                  </button>
+                </div>
+                <p id="finder-status" class="finder-status" aria-live="polite"></p>
+                <ul id="finder-results" class="finder-results"></ul>
+                <div id="finder-empty" class="finder-empty" hidden>
+                  <p>
+                    잎 모양(예: 갈라진 잎, 통통한 잎)이나 자라는 모습(예: 덩굴)으로
+                    다시 찾아보세요. 목록에 없는 식물이라면 기타 관엽식물로 등록하고
+                    나중에 바꿀 수 있어요.
+                  </p>
+                  <button type="button" class="button secondary" data-plant="foliage">
+                    기타 관엽식물로 등록
+                  </button>
+                </div>
               </div>
               <fieldset class="choice-group flow-field wide" id="signup-place">
                 <legend>놓아둔 자리</legend>

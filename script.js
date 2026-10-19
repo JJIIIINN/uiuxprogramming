@@ -19,6 +19,9 @@ const waterDays = {
   fern: 3,
   succulent: 14,
   stuckyi: 21,
+  rubber: 7,
+  spathiphyllum: 4,
+  cactus: 21,
   foliage: 7,
 };
 const placeRatio = { window: 0.8, veranda: 1, room: 1.2 };
@@ -272,7 +275,7 @@ function requireValue(control, value, message) {
 function validateStep(step) {
   if (step === 1) {
     requireValue(signupName, signupName.value.trim(), '식물 이름을 입력해 주세요. 예: 몬스테라 몽이');
-    requireValue(signupType, signupType.value, '식물 종류를 골라 주세요. 목록에 없으면 기타 관엽식물을 골라 주세요.');
+    requireValue(signupType, signupType.value, '식물 종류를 골라 주세요. 종류를 모르면 아래 생김새로 찾기를 눌러 보세요.');
     requireValue(signupPlace, getChecked(signupPlace), '식물을 놓아둔 자리를 하나 골라 주세요.');
   }
 
@@ -316,6 +319,9 @@ function fillSummary() {
 
   summaryName.textContent = signupName.value.trim();
   summaryType.textContent = signupType.options[signupType.selectedIndex].text;
+  if (foundPlant !== '' && foundPlant !== 'foliage' && plant === foundPlant) {
+    summaryType.textContent += ' (생김새로 찾음)';
+  }
   summaryPlace.textContent = placeNames[place];
   summaryInterval.textContent = interval + '일마다';
   summaryEmail.textContent = signupEmail.value.trim();
@@ -326,6 +332,11 @@ function fillSummary() {
 // 다음·알림 신청하기 버튼(또는 Enter)으로 제출했을 때
 function handleFlowSubmit(event) {
   event.preventDefault();
+
+  // 식물 찾기 입력창에서 누른 Enter는 다음 단계가 아니라 검색으로 처리
+  if (document.activeElement === finderInput) {
+    return;
+  }
 
   if (!validateStep(currentStep)) {
     return;
@@ -375,6 +386,7 @@ function restartSignup() {
     item.textContent = '';
   });
   doneMessage.textContent = '';
+  resetFinder();
 
   showStep(0);
 }
@@ -384,3 +396,243 @@ signupForm.addEventListener('click', handleFlowClick);
 signupForm.addEventListener('input', clearFieldError);
 signupForm.addEventListener('change', clearFieldError);
 restartButton.addEventListener('click', restartSignup);
+
+/* 6. 생김새로 식물 찾기: 신청 흐름 '내 식물' 단계에서 종류를 모를 때 */
+const finderToggle = document.querySelector('#finder-toggle');
+const finder = document.querySelector('#plant-finder');
+const finderInput = document.querySelector('#finder-input');
+const finderButton = document.querySelector('#finder-button');
+const finderClose = document.querySelector('#finder-close');
+const finderError = document.querySelector('#finder-error');
+const finderStatus = document.querySelector('#finder-status');
+const finderResults = document.querySelector('#finder-results');
+const finderEmpty = document.querySelector('#finder-empty');
+const typeNote = document.querySelector('#type-note');
+
+// 식물별 생김새와 검색어
+const plantGuide = [
+  {
+    value: 'monstera',
+    name: '몬스테라',
+    look: '넓은 잎에 구멍이 나거나 깊게 갈라져요',
+    keywords: ['구멍', '갈라진 잎', '찢어진 잎', '넓은 잎'],
+  },
+  {
+    value: 'scindapsus',
+    name: '스킨답서스',
+    look: '하트 모양 잎이 덩굴로 길게 늘어져요',
+    keywords: ['덩굴', '하트', '늘어지는', '행잉', '포토스'],
+  },
+  {
+    value: 'fern',
+    name: '보스턴고사리',
+    look: '가늘고 촘촘한 잎이 깃털처럼 풍성해요',
+    keywords: ['고사리', '깃털', '가는 잎', '풍성', '촘촘'],
+  },
+  {
+    value: 'succulent',
+    name: '다육이',
+    look: '작고 통통한 잎이 꽃잎처럼 겹겹이 모여 있어요',
+    keywords: ['통통', '두툼', '다육', '작은 잎', '로제트'],
+  },
+  {
+    value: 'stuckyi',
+    name: '스투키',
+    look: '단단한 막대 모양 잎이 위로 곧게 솟아 있어요',
+    keywords: ['막대', '원통', '기둥', '산세베리아', '곧게'],
+  },
+  {
+    value: 'rubber',
+    name: '고무나무',
+    look: '두껍고 반짝이는 타원형 잎이 굵은 줄기에 달려요',
+    keywords: ['광택', '반짝', '두꺼운 잎', '타원', '나무'],
+  },
+  {
+    value: 'spathiphyllum',
+    name: '스파티필름',
+    look: '진한 초록 잎 사이로 하얀 꽃이 피어요',
+    keywords: ['꽃', '하얀', '흰', '처지는 잎'],
+  },
+  {
+    value: 'cactus',
+    name: '선인장',
+    look: '가시가 있고 몸통이 둥글거나 길쭉해요',
+    keywords: ['가시', '선인장', '둥근 몸통'],
+  },
+];
+
+let foundPlant = ''; // 찾기로 고른 식물 종류 (확인 화면 표시에 사용)
+
+// 식물 종류 선택창 아래 안내 (type: success 또는 info)
+function setTypeNote(text, type) {
+  typeNote.textContent = text;
+  typeNote.className = 'field-note ' + type;
+}
+
+// 띄어쓰기를 지워서 "구멍 난 잎"과 "구멍난잎"을 같게 비교
+function removeSpaces(text) {
+  return text.split(' ').join('');
+}
+
+// 검색어가 이름·생김새·검색어 목록과 겹치는 식물 찾기
+function findPlants(query) {
+  const word = removeSpaces(query);
+
+  return plantGuide.filter(function (plant) {
+    const texts = [plant.name, plant.look].concat(plant.keywords);
+    return texts.some(function (text) {
+      const target = removeSpaces(text);
+      return target.includes(word) || word.includes(target);
+    });
+  });
+}
+
+function openFinder() {
+  finder.hidden = false;
+  finderToggle.setAttribute('aria-expanded', 'true');
+  finderInput.focus();
+}
+
+function closeFinder() {
+  finder.hidden = true;
+  finderToggle.setAttribute('aria-expanded', 'false');
+}
+
+// 닫기(취소): 식물 종류는 바꾸지 않고 다음 행동 안내
+function cancelFinder() {
+  closeFinder();
+  setTypeNote('식물 찾기를 닫았어요. 식물 종류는 그대로예요. 목록에서 고르거나 다시 찾아보세요.', 'info');
+  finderToggle.focus();
+}
+
+function toggleFinder() {
+  if (finder.hidden) {
+    openFinder();
+  } else {
+    cancelFinder();
+  }
+}
+
+function clearFinderError() {
+  finderInput.classList.remove('is-invalid');
+  finderError.textContent = '';
+}
+
+// 검색 결과 목록 또는 결과 없음 안내 표시
+function showResults(query, matches) {
+  finderResults.textContent = '';
+  finderEmpty.hidden = matches.length > 0;
+  finderStatus.classList.toggle('is-empty', matches.length === 0);
+
+  if (matches.length === 0) {
+    finderStatus.textContent = '‘' + query + '’ 검색 결과가 없어요.';
+    return;
+  }
+
+  finderStatus.textContent =
+    '‘' + query + '’ 검색 결과 ' + matches.length + '개 · 키우는 식물을 골라 주세요.';
+
+  matches.forEach(function (plant) {
+    const item = document.createElement('li');
+    const info = document.createElement('div');
+    const name = document.createElement('strong');
+    const look = document.createElement('span');
+    const pick = document.createElement('button');
+
+    name.textContent = plant.name;
+    look.textContent = plant.look + ' · 기본 ' + waterDays[plant.value] + '일마다 물주기';
+    pick.type = 'button';
+    pick.className = 'pick-button';
+    pick.dataset.plant = plant.value;
+    pick.textContent = '이 식물로 선택';
+
+    info.append(name, look);
+    item.append(info, pick);
+    finderResults.append(item);
+  });
+}
+
+// 찾기 버튼·Enter·예시 검색어로 검색
+function searchPlants() {
+  const query = finderInput.value.trim();
+
+  if (query === '') {
+    finderInput.classList.add('is-invalid');
+    finderError.textContent = '찾을 식물의 이름이나 생김새를 입력해 주세요. 예: 구멍 난 잎';
+    finderStatus.textContent = '';
+    finderResults.textContent = '';
+    finderEmpty.hidden = true;
+    finderInput.focus();
+    return;
+  }
+
+  clearFinderError();
+  showResults(query, findPlants(query));
+}
+
+// 한글 입력 중(조합 중) Enter는 무시하고, 입력이 끝난 Enter로 검색
+function handleFinderKey(event) {
+  if (event.key === 'Enter' && !event.isComposing) {
+    event.preventDefault();
+    searchPlants();
+  }
+}
+
+// 고른 식물을 신청 흐름의 식물 종류에 반영하고 찾기 닫기
+function pickPlant(value) {
+  signupType.value = value;
+  foundPlant = value;
+  setFieldError(signupType, '');
+  closeFinder();
+
+  if (value === 'foliage') {
+    setTypeNote('목록에 없는 식물이라 기타 관엽식물(기본 7일마다)로 등록했어요.', 'success');
+  } else {
+    const plantName = signupType.options[signupType.selectedIndex].text;
+    setTypeNote(
+      '생김새로 찾은 식물: ' + plantName + ' · 기본 ' + waterDays[value] + '일마다 물주기',
+      'success'
+    );
+  }
+  signupType.focus();
+}
+
+// 찾기 영역 안의 예시 검색어·선택 버튼 처리
+function handleFinderClick(event) {
+  const keyword = event.target.closest('[data-keyword]');
+  const pick = event.target.closest('[data-plant]');
+
+  if (keyword !== null) {
+    finderInput.value = keyword.dataset.keyword;
+    searchPlants();
+  }
+  if (pick !== null) {
+    pickPlant(pick.dataset.plant);
+  }
+}
+
+// 목록에서 직접 종류를 바꾸면 찾기 결과 안내 지우기
+function handleTypeChange() {
+  foundPlant = '';
+  setTypeNote('', '');
+}
+
+// 신청을 처음부터 다시 하면 찾기 상태도 초기화 (검색어는 form.reset()이 지움)
+function resetFinder() {
+  closeFinder();
+  clearFinderError();
+  finderStatus.textContent = '';
+  finderStatus.classList.remove('is-empty');
+  finderResults.textContent = '';
+  finderEmpty.hidden = true;
+  setTypeNote('', '');
+  foundPlant = '';
+}
+
+finderToggle.addEventListener('click', toggleFinder);
+finderClose.addEventListener('click', cancelFinder);
+finderButton.addEventListener('click', searchPlants);
+finderInput.addEventListener('keydown', handleFinderKey);
+finderInput.addEventListener('input', clearFinderError);
+finder.addEventListener('click', handleFinderClick);
+signupType.addEventListener('change', handleTypeChange);
