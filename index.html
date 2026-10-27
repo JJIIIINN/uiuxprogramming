@@ -284,19 +284,29 @@
           <div class="flow-step" hidden>
             <h3 tabindex="-1">어떤 식물을 키우나요?</h3>
             <div class="flow-fields">
-              <div class="field flow-field">
-                <label for="signup-name">식물 이름</label>
+              <div class="field flow-field" data-field="name" data-label="식물 이름">
+                <div class="field-head">
+                  <label for="signup-name">식물 이름 (필수)</label>
+                  <span id="signup-name-count" class="char-count">0 / 20자</span>
+                </div>
                 <input
                   type="text"
                   id="signup-name"
                   placeholder="예: 몬스테라 몽이"
                   autocomplete="off"
+                  aria-describedby="signup-name-help signup-name-count signup-name-error"
                 />
-                <p class="field-error"></p>
+                <p id="signup-name-help" class="field-help">
+                  알림 메일 제목에 쓰여요. 2자 이상 20자 이하로 지어 주세요.
+                </p>
+                <p id="signup-name-error" class="field-error"></p>
               </div>
-              <div class="field flow-field">
-                <label for="signup-type">식물 종류</label>
-                <select id="signup-type">
+              <div class="field flow-field" data-field="type" data-label="식물 종류">
+                <label for="signup-type">식물 종류 (필수)</label>
+                <select
+                  id="signup-type"
+                  aria-describedby="signup-type-help signup-type-error type-note"
+                >
                   <option value="">선택해 주세요</option>
                   <option value="monstera">몬스테라</option>
                   <option value="scindapsus">스킨답서스</option>
@@ -308,7 +318,10 @@
                   <option value="cactus">선인장</option>
                   <option value="foliage">기타 관엽식물</option>
                 </select>
-                <p class="field-error"></p>
+                <p id="signup-type-help" class="field-help">
+                  종류에 따라 물주기 간격이 달라져요.
+                </p>
+                <p id="signup-type-error" class="field-error"></p>
                 <p id="type-note" class="field-note" aria-live="polite"></p>
                 <button
                   type="button"
@@ -381,8 +394,14 @@
                   </button>
                 </div>
               </div>
-              <fieldset class="choice-group flow-field wide" id="signup-place">
-                <legend>놓아둔 자리</legend>
+              <fieldset
+                class="choice-group flow-field wide"
+                id="signup-place"
+                data-field="place"
+                data-label="놓아둔 자리"
+                aria-describedby="signup-place-help signup-place-error"
+              >
+                <legend>놓아둔 자리 (필수)</legend>
                 <div class="choices">
                   <label class="choice">
                     <input type="radio" name="place" value="window" />
@@ -397,9 +416,13 @@
                     <span>빛이 적은 방 안</span>
                   </label>
                 </div>
-                <p class="field-error"></p>
+                <p id="signup-place-help" class="field-help">
+                  햇빛이 잘 들수록 흙이 빨리 말라서 물을 더 자주 줘요.
+                </p>
+                <p id="signup-place-error" class="field-error"></p>
               </fieldset>
             </div>
+            <p class="step-alert" role="alert"></p>
             <div class="flow-actions">
               <button type="button" class="button secondary" data-goto="0">
                 이전
@@ -412,18 +435,76 @@
           <div class="flow-step" hidden>
             <h3 tabindex="-1">알림을 어디로 보내 드릴까요?</h3>
             <div class="flow-fields">
-              <div class="field flow-field wide">
-                <label for="signup-email">이메일 주소</label>
+              <div
+                class="field flow-field wide"
+                data-field="email"
+                data-label="이메일 주소"
+              >
+                <label for="signup-email">이메일 주소 (필수)</label>
                 <input
                   type="email"
                   id="signup-email"
                   placeholder="green@example.com"
                   autocomplete="email"
+                  aria-describedby="signup-email-help signup-email-check signup-email-error"
                 />
-                <p class="field-error"></p>
+                <p id="signup-email-help" class="field-help">
+                  물주기 알림을 받을 주소예요. @와 도메인(예: .com)까지 입력해 주세요.
+                </p>
+                <p id="signup-email-check" class="field-check" aria-live="polite"></p>
+                <p id="signup-email-error" class="field-error"></p>
               </div>
-              <fieldset class="choice-group flow-field wide" id="signup-time">
-                <legend>알림 받을 시간</legend>
+
+              <div class="flow-option wide">
+                <label class="check">
+                  <input
+                    type="checkbox"
+                    id="signup-sms"
+                    aria-controls="sms-field"
+                    aria-describedby="signup-sms-help"
+                  />
+                  <span>문자(SMS)로도 알림 받기 (선택)</span>
+                </label>
+                <p id="signup-sms-help" class="field-help">
+                  체크하면 휴대폰 번호를 입력하는 칸이 나타나요.
+                </p>
+              </div>
+
+              <!-- 문자 알림을 체크했을 때만 표시·입력 가능 -->
+              <div
+                class="field flow-field wide conditional"
+                id="sms-field"
+                data-field="phone"
+                data-label="휴대폰 번호"
+                hidden
+              >
+                <label for="signup-phone">휴대폰 번호 (문자 알림 필수)</label>
+                <input
+                  type="tel"
+                  id="signup-phone"
+                  inputmode="numeric"
+                  autocomplete="tel"
+                  placeholder="010-1234-5678"
+                  maxlength="13"
+                  disabled
+                  aria-describedby="signup-phone-help signup-phone-check signup-phone-error"
+                />
+                <p id="signup-phone-help" class="field-help">
+                  010으로 시작하는 11자리 번호예요. 숫자만 입력하면 - 가 자동으로
+                  붙어요.
+                </p>
+                <p id="signup-phone-check" class="field-check" aria-live="polite"></p>
+                <p id="signup-phone-error" class="field-error"></p>
+              </div>
+
+              <fieldset
+                class="choice-group flow-field wide"
+                id="signup-time"
+                data-field="time"
+                data-label="알림 받을 시간"
+                aria-describedby="signup-time-help signup-time-error"
+              >
+                <legend>알림 받을 시간 (필수)</legend>
                 <div class="choices">
                   <label class="choice">
                     <input type="radio" name="alert-time" value="morning" />
@@ -437,10 +518,47 @@
                     <input type="radio" name="alert-time" value="evening" />
                     <span>저녁 8시</span>
                   </label>
+                  <label class="choice">
+                    <input
+                      type="radio"
+                      name="alert-time"
+                      value="custom"
+                      aria-controls="custom-time-field"
+                    />
+                    <span>직접 정하기</span>
+                  </label>
                 </div>
-                <p class="field-error"></p>
+                <p id="signup-time-help" class="field-help">
+                  물 줄 날 이 시간에 알림을 보내요. 직접 정하기를 고르면 시간 입력
+                  칸이 나타나요.
+                </p>
+                <p id="signup-time-error" class="field-error"></p>
               </fieldset>
+
+              <!-- 알림 시간 '직접 정하기'를 골랐을 때만 표시·입력 가능 -->
+              <div
+                class="field flow-field wide conditional"
+                id="custom-time-field"
+                data-field="customTime"
+                data-label="원하는 알림 시간"
+                hidden
+              >
+                <label for="signup-custom-time">원하는 알림 시간</label>
+                <input
+                  type="time"
+                  id="signup-custom-time"
+                  min="06:00"
+                  max="22:00"
+                  disabled
+                  aria-describedby="signup-custom-time-help signup-custom-time-error"
+                />
+                <p id="signup-custom-time-help" class="field-help">
+                  오전 6시부터 밤 10시 사이로 정해 주세요.
+                </p>
+                <p id="signup-custom-time-error" class="field-error"></p>
+              </div>
             </div>
+            <p class="step-alert" role="alert"></p>
             <div class="flow-actions">
               <button type="button" class="button secondary" data-goto="1">
                 이전
@@ -476,23 +594,52 @@
                 </div>
                 <dl>
                   <div><dt>이메일</dt><dd id="summary-email"></dd></div>
+                  <div><dt>문자 알림</dt><dd id="summary-sms"></dd></div>
                   <div><dt>알림 시간</dt><dd id="summary-time"></dd></div>
                   <div><dt>첫 알림</dt><dd id="summary-first"></dd></div>
                 </dl>
               </div>
             </div>
-            <div class="flow-field agree">
+            <div class="flow-field agree" data-field="agree" data-label="수신 동의">
               <label class="check">
-                <input type="checkbox" id="signup-agree" />
-                <span>물주기 알림 메일 수신에 동의합니다. (필수)</span>
+                <input
+                  type="checkbox"
+                  id="signup-agree"
+                  aria-describedby="signup-agree-help signup-agree-error"
+                />
+                <span>물주기 알림 수신에 동의합니다. (필수)</span>
               </label>
-              <p class="field-error"></p>
+              <p id="signup-agree-help" class="field-help">
+                동의해야 알림을 보낼 수 있어요. 언제든지 알림을 끌 수 있어요.
+              </p>
+              <p id="signup-agree-error" class="field-error"></p>
+            </div>
+            <p class="step-alert" role="alert"></p>
+            <!-- 제출 중·실패 안내 -->
+            <div id="submit-status" class="submit-status" role="status" hidden>
+              <p id="submit-status-text"></p>
+              <button
+                type="button"
+                class="edit-button"
+                id="submit-fix"
+                data-goto="2"
+                hidden
+              >
+                이메일 바꾸러 가기
+              </button>
             </div>
             <div class="flow-actions">
-              <button type="button" class="button secondary" data-goto="2">
+              <button
+                type="button"
+                class="button secondary"
+                id="confirm-prev"
+                data-goto="2"
+              >
                 이전
               </button>
-              <button type="submit" class="button">알림 신청하기</button>
+              <button type="submit" class="button" id="signup-submit">
+                알림 신청하기
+              </button>
             </div>
           </div>
 

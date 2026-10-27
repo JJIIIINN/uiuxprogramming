@@ -199,8 +199,23 @@ const signupName = document.querySelector('#signup-name');
 const signupType = document.querySelector('#signup-type');
 const signupPlace = document.querySelector('#signup-place');
 const signupEmail = document.querySelector('#signup-email');
+const signupSms = document.querySelector('#signup-sms');
+const signupPhone = document.querySelector('#signup-phone');
 const signupTime = document.querySelector('#signup-time');
+const signupCustomTime = document.querySelector('#signup-custom-time');
 const signupAgree = document.querySelector('#signup-agree');
+
+const smsField = document.querySelector('#sms-field');
+const customTimeField = document.querySelector('#custom-time-field');
+const nameCount = document.querySelector('#signup-name-count');
+const emailCheck = document.querySelector('#signup-email-check');
+const phoneCheck = document.querySelector('#signup-phone-check');
+
+const signupSubmit = document.querySelector('#signup-submit');
+const confirmPrev = document.querySelector('#confirm-prev');
+const submitStatus = document.querySelector('#submit-status');
+const submitStatusText = document.querySelector('#submit-status-text');
+const submitFix = document.querySelector('#submit-fix');
 const restartButton = document.querySelector('#restart-button');
 
 const summaryName = document.querySelector('#summary-name');
@@ -208,6 +223,7 @@ const summaryType = document.querySelector('#summary-type');
 const summaryPlace = document.querySelector('#summary-place');
 const summaryInterval = document.querySelector('#summary-interval');
 const summaryEmail = document.querySelector('#summary-email');
+const summarySms = document.querySelector('#summary-sms');
 const summaryTime = document.querySelector('#summary-time');
 const summaryFirst = document.querySelector('#summary-first');
 const doneMessage = document.querySelector('#done-message');
@@ -219,9 +235,12 @@ const placeNames = {
 };
 const timeNames = { morning: '아침 8시', noon: '낮 12시', evening: '저녁 8시' };
 
+const nameMin = 2;
+const nameMax = 20;
 const confirmStep = 3;
 const doneStep = 4;
 let currentStep = 0;
+let isSubmitting = false;
 
 // 라디오 버튼 묶음에서 고른 값 (고르지 않았으면 빈 문자열)
 function getChecked(group) {
@@ -231,6 +250,121 @@ function getChecked(group) {
   }
   return checked.value;
 }
+
+// 숫자만 남기기 (휴대폰 번호의 - 와 공백 지우기)
+function onlyDigits(text) {
+  return text.replace(/[^0-9]/g, '');
+}
+
+// "01012345678" → "010-1234-5678"
+function formatPhone(digits) {
+  if (digits.length < 4) {
+    return digits;
+  }
+  if (digits.length < 8) {
+    return digits.slice(0, 3) + '-' + digits.slice(3);
+  }
+  return digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7);
+}
+
+// "07:30" → "오전 7시 30분"
+function formatTime(value) {
+  const hour = Number(value.slice(0, 2));
+  const minute = Number(value.slice(3, 5));
+  let text = (hour < 12 ? '오전 ' : '오후 ') + (hour % 12 === 0 ? 12 : hour % 12) + '시';
+  if (minute > 0) {
+    text += ' ' + minute + '분';
+  }
+  return text;
+}
+
+function isValidEmail() {
+  const email = signupEmail.value.trim();
+  const domain = email.slice(email.indexOf('@') + 1);
+  return email !== '' && signupEmail.checkValidity() && domain.includes('.');
+}
+
+function isValidPhone() {
+  const digits = onlyDigits(signupPhone.value);
+  return digits.length === 11 && digits.startsWith('010');
+}
+
+function getTimeLabel() {
+  const time = getChecked(signupTime);
+  if (time === 'custom') {
+    return formatTime(signupCustomTime.value);
+  }
+  return timeNames[time];
+}
+
+// 항목별 검사: 문제가 있으면 무엇을 어떻게 고칠지, 없으면 빈 문자열
+const validators = {
+  name: function () {
+    const length = signupName.value.trim().length;
+    if (length === 0) {
+      return '식물 이름을 입력해 주세요. 예: 몬스테라 몽이';
+    }
+    if (length < nameMin) {
+      return '식물 이름이 너무 짧아요. ' + nameMin + '자 이상으로 입력해 주세요.';
+    }
+    if (length > nameMax) {
+      return '식물 이름이 ' + (length - nameMax) + '자 넘쳐요. ' + nameMax + '자 이하로 줄여 주세요.';
+    }
+    return '';
+  },
+  type: function () {
+    if (signupType.value === '') {
+      return '식물 종류를 골라 주세요. 종류를 모르면 아래 생김새로 찾기를 눌러 보세요.';
+    }
+    return '';
+  },
+  place: function () {
+    if (getChecked(signupPlace) === '') {
+      return '식물을 놓아둔 자리를 하나 골라 주세요.';
+    }
+    return '';
+  },
+  email: function () {
+    if (signupEmail.value.trim() === '') {
+      return '알림 받을 이메일 주소를 입력해 주세요.';
+    }
+    if (!isValidEmail()) {
+      return '이메일 주소 형식을 확인해 주세요. 예: green@example.com';
+    }
+    return '';
+  },
+  phone: function () {
+    if (onlyDigits(signupPhone.value) === '') {
+      return '문자 알림을 받을 휴대폰 번호를 입력해 주세요. 문자가 필요 없으면 위의 체크를 풀어 주세요.';
+    }
+    if (!isValidPhone()) {
+      return '010으로 시작하는 11자리 번호를 입력해 주세요. 예: 010-1234-5678';
+    }
+    return '';
+  },
+  time: function () {
+    if (getChecked(signupTime) === '') {
+      return '알림 받을 시간을 하나 골라 주세요.';
+    }
+    return '';
+  },
+  customTime: function () {
+    const time = signupCustomTime.value;
+    if (time === '') {
+      return '알림 받을 시간을 입력해 주세요. 예: 오전 7:30';
+    }
+    if (time < '06:00' || time > '22:00') {
+      return '이른 새벽이나 늦은 밤은 피해 주세요. 오전 6시부터 밤 10시 사이로 정해 주세요.';
+    }
+    return '';
+  },
+  agree: function () {
+    if (!signupAgree.checked) {
+      return '알림을 받으려면 수신 동의에 체크해 주세요.';
+    }
+    return '';
+  },
+};
 
 // 해당 단계 화면만 보이고 진행 표시 갱신
 function showStep(step) {
@@ -252,57 +386,64 @@ function showStep(step) {
     }
   });
 
+  const alertBox = flowSteps[step].querySelector('.step-alert');
+  if (alertBox !== null) {
+    alertBox.textContent = '';
+  }
+
   flowSteps[step].querySelector('h3').focus();
 }
 
-// 항목 아래에 고치는 방법 안내 (message가 빈 문자열이면 오류 지우기)
+// 단계 아래 안내: 수정이 필요한 항목의 개수와 이름 (show가 false면 이미 보일 때만 갱신)
+function updateStepAlert(show) {
+  const alertBox = flowSteps[currentStep].querySelector('.step-alert');
+  if (alertBox === null || (!show && alertBox.textContent === '')) {
+    return;
+  }
+
+  const labels = [];
+  flowSteps[currentStep].querySelectorAll('.flow-field.is-invalid').forEach(function (field) {
+    labels.push(field.dataset.label);
+  });
+
+  if (labels.length === 0) {
+    alertBox.textContent = '';
+  } else {
+    alertBox.textContent =
+      '수정이 필요한 항목 ' + labels.length + '개: ' + labels.join(', ') + '. 빨간 안내를 보고 고쳐 주세요.';
+  }
+}
+
+// 항목 아래에 고치는 방법 안내 (message가 빈 문자열이면 오류 해제)
 function setFieldError(control, message) {
   const field = control.closest('.flow-field');
   field.classList.toggle('is-invalid', message !== '');
   field.querySelector('.field-error').textContent = message;
+  updateStepAlert(false);
 }
 
-// 값이 비어 있으면 오류 안내, 있으면 오류 지우기
-function requireValue(control, value, message) {
-  if (value === '') {
-    setFieldError(control, message);
-  } else {
-    setFieldError(control, '');
-  }
+function validateField(field) {
+  const message = validators[field.dataset.field]();
+  setFieldError(field, message);
+  return message === '';
 }
 
-// 현재 단계의 필수 입력·선택 확인 (빠진 항목이 있으면 false)
+// 현재 단계의 보이는 항목을 모두 검사 (숨겨진 조건부 영역은 빼고)
 function validateStep(step) {
-  if (step === 1) {
-    requireValue(signupName, signupName.value.trim(), '식물 이름을 입력해 주세요. 예: 몬스테라 몽이');
-    requireValue(signupType, signupType.value, '식물 종류를 골라 주세요. 종류를 모르면 아래 생김새로 찾기를 눌러 보세요.');
-    requireValue(signupPlace, getChecked(signupPlace), '식물을 놓아둔 자리를 하나 골라 주세요.');
-  }
+  let firstError = null;
 
-  if (step === 2) {
-    const email = signupEmail.value.trim();
-
-    if (email === '') {
-      setFieldError(signupEmail, '알림 받을 이메일 주소를 입력해 주세요.');
-    } else if (!signupEmail.checkValidity() || !email.includes('.')) {
-      setFieldError(signupEmail, '이메일 주소 형식을 확인해 주세요. 예: green@example.com');
-    } else {
-      setFieldError(signupEmail, '');
+  flowSteps[step].querySelectorAll('.flow-field').forEach(function (field) {
+    if (field.hidden) {
+      return;
     }
-
-    requireValue(signupTime, getChecked(signupTime), '알림 받을 시간을 하나 골라 주세요.');
-  }
-
-  if (step === confirmStep) {
-    if (signupAgree.checked) {
-      setFieldError(signupAgree, '');
-    } else {
-      setFieldError(signupAgree, '알림 메일을 받으려면 수신 동의에 체크해 주세요.');
+    field.dataset.touched = 'true';
+    if (!validateField(field) && firstError === null) {
+      firstError = field;
     }
-  }
+  });
 
-  // 빠진 항목이 있으면 첫 번째 항목으로 커서 이동
-  const firstError = flowSteps[step].querySelector('.flow-field.is-invalid');
+  updateStepAlert(true);
+
   if (firstError !== null) {
     firstError.querySelector('input, select').focus();
     return false;
@@ -310,11 +451,112 @@ function validateStep(step) {
   return true;
 }
 
+// 입력 중 표시 (색과 함께 문구로도 상태를 구분)
+function setCheck(target, text, state) {
+  target.textContent = text;
+  target.className = 'field-check ' + state;
+}
+
+function updateNameCount() {
+  const length = signupName.value.trim().length;
+  let text = length + ' / ' + nameMax + '자';
+  let state = '';
+
+  if (length > nameMax) {
+    text += ' · ' + (length - nameMax) + '자 초과';
+    state = 'is-over';
+  } else if (length >= nameMin) {
+    text += ' · 조건 충족';
+    state = 'is-ok';
+  } else if (length > 0) {
+    text += ' · ' + (nameMin - length) + '자 더 필요';
+    state = 'is-short';
+  }
+
+  nameCount.textContent = text;
+  nameCount.className = 'char-count ' + state;
+}
+
+function updateEmailCheck() {
+  if (signupEmail.value.trim() === '') {
+    setCheck(emailCheck, '', '');
+  } else if (isValidEmail()) {
+    setCheck(emailCheck, '✓ 올바른 이메일 형식이에요.', 'is-ok');
+  } else {
+    setCheck(emailCheck, '확인 중: 아직 이메일 형식이 아니에요. @와 도메인까지 입력해 주세요.', 'is-pending');
+  }
+}
+
+function updatePhoneCheck() {
+  const digits = onlyDigits(signupPhone.value);
+
+  if (digits === '') {
+    setCheck(phoneCheck, '', '');
+  } else if (isValidPhone()) {
+    setCheck(phoneCheck, '✓ 휴대폰 번호 11자리를 확인했어요.', 'is-ok');
+  } else if (digits.length >= 3 && !digits.startsWith('010')) {
+    setCheck(phoneCheck, '확인 중: 010으로 시작하는 번호만 받을 수 있어요.', 'is-pending');
+  } else {
+    setCheck(phoneCheck, '확인 중: 지금 ' + digits.length + '자리 · ' + (11 - digits.length) + '자리 더 입력해 주세요.', 'is-pending');
+  }
+}
+
+// 입력하는 동안: 글자 수·조건 표시를 갱신하고, 한 번 검사한 항목은 바로 다시 검사
+function handleLiveInput(event) {
+  if (event.target === signupName) {
+    updateNameCount();
+  }
+  if (event.target === signupEmail) {
+    updateEmailCheck();
+  }
+  if (event.target === signupPhone) {
+    signupPhone.value = formatPhone(onlyDigits(signupPhone.value).slice(0, 11));
+    updatePhoneCheck();
+  }
+
+  const field = event.target.closest('.flow-field');
+  if (field !== null && field.dataset.touched === 'true') {
+    validateField(field);
+  }
+}
+
+// 입력칸을 벗어날 때: 값을 입력한 글자 입력칸은 그때부터 검사
+function handleFieldBlur(event) {
+  const field = event.target.closest('.flow-field');
+  const isTextInput = event.target.matches(
+    'input[type="text"], input[type="email"], input[type="tel"], input[type="time"]'
+  );
+
+  if (field === null || !isTextInput || event.target.value.trim() === '') {
+    return;
+  }
+  field.dataset.touched = 'true';
+  validateField(field);
+}
+
+// 조건부 입력 영역: 보이면 입력 가능, 숨기면 disabled로 입력·검사·제출에서 빼고 오류도 지움
+function setConditional(field, show) {
+  field.hidden = !show;
+  field.querySelectorAll('input').forEach(function (input) {
+    input.disabled = !show;
+  });
+
+  if (!show) {
+    field.dataset.touched = '';
+    setFieldError(field, '');
+  }
+}
+
+// 문자 알림 체크박스와 '직접 정하기' 라디오 선택에 따라 영역 전환
+function updateConditionalFields() {
+  setConditional(smsField, signupSms.checked);
+  setConditional(customTimeField, getChecked(signupTime) === 'custom');
+}
+
 // 지금 입력·선택된 값으로 확인 화면 채우기
 function fillSummary() {
   const plant = signupType.value;
   const place = getChecked(signupPlace);
-  const time = getChecked(signupTime);
   const interval = getWaterInterval(plant, place);
 
   summaryName.textContent = signupName.value.trim();
@@ -325,8 +567,148 @@ function fillSummary() {
   summaryPlace.textContent = placeNames[place];
   summaryInterval.textContent = interval + '일마다';
   summaryEmail.textContent = signupEmail.value.trim();
-  summaryTime.textContent = timeNames[time];
-  summaryFirst.textContent = formatDate(getDateAfter(interval)) + ' ' + timeNames[time];
+  summarySms.textContent = signupSms.checked ? signupPhone.value : '받지 않음';
+  summaryTime.textContent = getTimeLabel();
+  summaryFirst.textContent = formatDate(getDateAfter(interval)) + ' ' + getTimeLabel();
+
+  hideSubmitStatus();
+}
+
+/* 신청 기록: 서버 대신 브라우저 localStorage에 저장 (프로토타입) */
+const storageKey = 'chorok-signups';
+const sampleEmails = ['test@chorok.kr']; // 이미 신청한 것으로 처리하는 예시 이메일 (실패 확인용)
+
+function loadSignups() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(storageKey));
+    if (Array.isArray(saved)) {
+      return saved;
+    }
+  } catch (error) {
+    // 저장소를 쓸 수 없거나 내용이 깨졌으면 빈 목록으로 처리
+  }
+  return [];
+}
+
+function isRegistered(email) {
+  const signups = loadSignups();
+  return (
+    sampleEmails.includes(email) ||
+    signups.some(function (signup) {
+      return signup.email === email;
+    })
+  );
+}
+
+function saveSignup(record) {
+  const signups = loadSignups();
+  signups.push(record);
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(signups));
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function showSubmitStatus(text, state, showFix) {
+  submitStatus.hidden = false;
+  submitStatus.className = 'submit-status ' + state;
+  submitStatusText.textContent = text;
+  submitFix.hidden = !showFix;
+}
+
+function hideSubmitStatus() {
+  submitStatus.hidden = true;
+  submitStatusText.textContent = '';
+  submitFix.hidden = true;
+}
+
+// 제출 중: 버튼을 비활성화하고 진행 문구를 보여 중복 제출 막기
+function setSubmitting(on) {
+  isSubmitting = on;
+  signupSubmit.disabled = on;
+  signupSubmit.classList.toggle('is-loading', on);
+  confirmPrev.disabled = on;
+  signupAgree.disabled = on;
+  flowSteps[confirmStep].querySelectorAll('.edit-button').forEach(function (button) {
+    button.disabled = on;
+  });
+  signupForm.setAttribute('aria-busy', String(on));
+
+  if (on) {
+    signupSubmit.textContent = '신청하는 중…';
+  }
+}
+
+function getDoneMessage() {
+  let message =
+    summaryName.textContent + '의 첫 물주기 알림을 ' + summaryFirst.textContent + '에 ' +
+    summaryEmail.textContent + ' 주소';
+  if (signupSms.checked) {
+    message += '와 ' + signupPhone.value + ' 문자';
+  }
+  return message + '로 보내 드릴게요.';
+}
+
+// 신청 보내기: 1.5초 동안 '신청하는 중' 상태를 보여 준 뒤 결과 처리
+function sendSignup() {
+  setSubmitting(true);
+  showSubmitStatus('신청 내용을 보내는 중이에요. 잠시만 기다려 주세요.', 'is-progress', false);
+  setTimeout(finishSignup, 1500);
+}
+
+// 결과 처리: 실패하면 입력 내용을 그대로 두고 다시 신청할 수 있게
+function finishSignup() {
+  const email = signupEmail.value.trim().toLowerCase();
+  setSubmitting(false);
+  signupSubmit.textContent = '다시 신청하기';
+
+  // 실패 1: 인터넷 연결이 끊김
+  if (!navigator.onLine) {
+    showSubmitStatus(
+      '인터넷에 연결되어 있지 않아 신청하지 못했어요. 입력한 내용은 그대로 있어요. 연결을 확인한 뒤 다시 신청해 주세요.',
+      'is-error',
+      false
+    );
+    signupSubmit.focus();
+    return;
+  }
+
+  // 실패 2: 이미 신청한 이메일 (예시 이메일 또는 이 브라우저에서 신청한 이메일)
+  if (isRegistered(email)) {
+    showSubmitStatus(
+      '이미 물주기 알림을 신청한 이메일이에요(' + email + '). 다른 이메일로 바꾼 뒤 다시 신청해 주세요.',
+      'is-error',
+      true
+    );
+    submitFix.focus();
+    return;
+  }
+
+  // 실패 3: 브라우저에 저장할 수 없음 (저장소 차단·용량 부족)
+  const saved = saveSignup({
+    email: email,
+    name: signupName.value.trim(),
+    plant: signupType.value,
+    phone: signupSms.checked ? signupPhone.value : '',
+    time: getTimeLabel(),
+    createdAt: new Date().toISOString(),
+  });
+  if (!saved) {
+    showSubmitStatus(
+      '신청 내용을 저장하지 못했어요. 입력한 내용은 그대로 있어요. 잠시 후 다시 신청해 주세요.',
+      'is-error',
+      false
+    );
+    signupSubmit.focus();
+    return;
+  }
+
+  hideSubmitStatus();
+  signupSubmit.textContent = '알림 신청하기';
+  doneMessage.textContent = getDoneMessage();
+  showStep(doneStep);
 }
 
 // 다음·알림 신청하기 버튼(또는 Enter)으로 제출했을 때
@@ -338,15 +720,17 @@ function handleFlowSubmit(event) {
     return;
   }
 
+  // 신청하는 중에는 다시 제출하지 않음
+  if (isSubmitting) {
+    return;
+  }
+
   if (!validateStep(currentStep)) {
     return;
   }
 
   if (currentStep === confirmStep) {
-    doneMessage.textContent =
-      summaryName.textContent + '의 첫 물주기 알림을 ' + summaryFirst.textContent +
-      '에 ' + summaryEmail.textContent + ' 주소로 보내 드릴게요.';
-    showStep(doneStep);
+    sendSignup();
     return;
   }
 
@@ -359,29 +743,30 @@ function handleFlowSubmit(event) {
 // 시작·이전·수정 버튼: data-goto에 적힌 단계로 이동 (입력값은 그대로 유지)
 function handleFlowClick(event) {
   const button = event.target.closest('[data-goto]');
-  if (button === null) {
+  if (button === null || isSubmitting) {
     return;
   }
   showStep(Number(button.dataset.goto));
 }
 
-// 오류가 표시된 항목을 고치면 그 항목의 오류 안내 지우기
-function clearFieldError(event) {
-  const field = event.target.closest('.flow-field');
-  if (field !== null && field.classList.contains('is-invalid')) {
-    setFieldError(event.target, '');
-  }
-}
-
-// 처음부터 다시: 입력·선택·오류·확인 내용·진행 상태 모두 초기화
+// 처음부터 다시: 입력값·안내 문구·버튼 상태·조건부 영역·진행 상태 모두 초기화
 function restartSignup() {
   signupForm.reset();
 
   signupForm.querySelectorAll('.flow-field').forEach(function (field) {
-    field.classList.remove('is-invalid');
-    field.querySelector('.field-error').textContent = '';
+    field.dataset.touched = '';
+    setFieldError(field, '');
   });
+  signupForm.querySelectorAll('.step-alert').forEach(function (alertBox) {
+    alertBox.textContent = '';
+  });
+  updateConditionalFields();
+  updateNameCount();
+  setCheck(emailCheck, '', '');
+  setCheck(phoneCheck, '', '');
 
+  hideSubmitStatus();
+  signupSubmit.textContent = '알림 신청하기';
   signupForm.querySelectorAll('.summary dd').forEach(function (item) {
     item.textContent = '';
   });
@@ -393,8 +778,11 @@ function restartSignup() {
 
 signupForm.addEventListener('submit', handleFlowSubmit);
 signupForm.addEventListener('click', handleFlowClick);
-signupForm.addEventListener('input', clearFieldError);
-signupForm.addEventListener('change', clearFieldError);
+signupForm.addEventListener('input', handleLiveInput);
+signupForm.addEventListener('change', handleLiveInput);
+signupForm.addEventListener('focusout', handleFieldBlur);
+signupSms.addEventListener('change', updateConditionalFields);
+signupTime.addEventListener('change', updateConditionalFields);
 restartButton.addEventListener('click', restartSignup);
 
 /* 6. 생김새로 식물 찾기: 신청 흐름 '내 식물' 단계에서 종류를 모를 때 */
