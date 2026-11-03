@@ -576,7 +576,6 @@ function fillSummary() {
 
 /* 신청 기록: 서버 대신 브라우저 localStorage에 저장 (프로토타입) */
 const storageKey = 'chorok-signups';
-const sampleEmails = ['test@chorok.kr']; // 이미 신청한 것으로 처리하는 예시 이메일 (실패 확인용)
 
 function loadSignups() {
   try {
@@ -590,25 +589,27 @@ function loadSignups() {
   return [];
 }
 
-function isRegistered(email) {
-  const signups = loadSignups();
-  return (
-    sampleEmails.includes(email) ||
-    signups.some(function (signup) {
-      return signup.email === email;
-    })
-  );
+// 같은 이메일로 같은 이름의 식물을 이미 신청했는지 (띄어쓰기는 무시)
+function isRegistered(email, name) {
+  const plantName = removeSpaces(name);
+  return loadSignups().some(function (signup) {
+    return signup.email === email && removeSpaces(signup.name) === plantName;
+  });
 }
 
-function saveSignup(record) {
-  const signups = loadSignups();
-  signups.push(record);
+function saveSignupList(signups) {
   try {
     localStorage.setItem(storageKey, JSON.stringify(signups));
     return true;
   } catch (error) {
     return false;
   }
+}
+
+function saveSignup(record) {
+  const signups = loadSignups();
+  signups.push(record);
+  return saveSignupList(signups);
 }
 
 function showSubmitStatus(text, state, showFix) {
@@ -675,10 +676,10 @@ function finishSignup() {
     return;
   }
 
-  // 실패 2: 이미 신청한 이메일 (예시 이메일 또는 이 브라우저에서 신청한 이메일)
-  if (isRegistered(email)) {
+  // 실패 2: 같은 이메일로 같은 이름의 식물을 이미 신청함 (이 브라우저에 저장된 신청 기준)
+  if (isRegistered(email, signupName.value.trim())) {
     showSubmitStatus(
-      '이미 물주기 알림을 신청한 이메일이에요(' + email + '). 다른 이메일로 바꾼 뒤 다시 신청해 주세요.',
+      '‘' + signupName.value.trim() + '’ 식물은 이 이메일로 이미 알림을 신청했어요. 식물 이름이나 이메일을 바꾼 뒤 다시 신청해 주세요.',
       'is-error',
       true
     );
@@ -687,13 +688,18 @@ function finishSignup() {
   }
 
   // 실패 3: 브라우저에 저장할 수 없음 (저장소 차단·용량 부족)
+  const place = getChecked(signupPlace);
   const saved = saveSignup({
+    id: 'p-' + Date.now(),
     email: email,
     name: signupName.value.trim(),
     plant: signupType.value,
+    place: place,
+    interval: getWaterInterval(signupType.value, place),
     phone: signupSms.checked ? signupPhone.value : '',
     time: getTimeLabel(),
     createdAt: new Date().toISOString(),
+    lastWatered: toDateKey(new Date()),
   });
   if (!saved) {
     showSubmitStatus(
@@ -708,6 +714,12 @@ function finishSignup() {
   hideSubmitStatus();
   signupSubmit.textContent = '알림 신청하기';
   doneMessage.textContent = getDoneMessage();
+
+  // 내 식물 목록에 바로 반영 (새 식물이 보이도록 전체 보기로)
+  currentFilter = 'all';
+  renderPlantList();
+  setPlantMessage('‘' + signupName.value.trim() + '’ 식물을 목록에 추가했어요.', 'is-success');
+
   showStep(doneStep);
 }
 
@@ -1024,3 +1036,387 @@ finderInput.addEventListener('keydown', handleFinderKey);
 finderInput.addEventListener('input', clearFinderError);
 finder.addEventListener('click', handleFinderClick);
 signupType.addEventListener('change', handleTypeChange);
+
+/* 7. 상단 메뉴: 현재 위치 표시와 모바일 메뉴 열기·닫기 */
+const topbar = document.querySelector('.topbar');
+const menuToggle = document.querySelector('#menu-toggle');
+const menuLabel = menuToggle.querySelector('.menu-label');
+const menuLinks = document.querySelectorAll('.menu a');
+const menuSections = [];
+const wideScreen = window.matchMedia('(min-width: 769px)');
+
+menuLinks.forEach(function (link) {
+  menuSections.push(document.querySelector(link.getAttribute('href')));
+});
+
+// 화면 위에서 35% 지점을 지난 마지막 섹션을 현재 위치로 보고, 그 메뉴에만 aria-current 표시
+function updateCurrentMenu() {
+  const line = window.innerHeight * 0.35;
+  let currentIndex = -1;
+
+  menuSections.forEach(function (section, index) {
+    if (section.getBoundingClientRect().top <= line) {
+      currentIndex = index;
+    }
+  });
+
+  menuLinks.forEach(function (link, index) {
+    if (index === currentIndex) {
+      link.setAttribute('aria-current', 'location');
+    } else {
+      link.removeAttribute('aria-current');
+    }
+  });
+}
+
+// 스크롤 중에는 화면을 그리기 직전에 한 번만 계산
+let menuFrame = 0;
+function requestMenuUpdate() {
+  if (menuFrame !== 0) {
+    return;
+  }
+  menuFrame = requestAnimationFrame(function () {
+    menuFrame = 0;
+    updateCurrentMenu();
+  });
+}
+
+// 좁은 화면 메뉴: 실제 표시 상태, 버튼 문구, aria-expanded를 함께 변경
+function setMenuOpen(open) {
+  topbar.classList.toggle('is-menu-open', open);
+  menuToggle.setAttribute('aria-expanded', String(open));
+  menuLabel.textContent = open ? '메뉴 닫기' : '메뉴 열기';
+}
+
+function toggleMenu() {
+  setMenuOpen(menuToggle.getAttribute('aria-expanded') !== 'true');
+}
+
+// 메뉴에서 목적지를 고르면 메뉴를 닫고 그 위치로 이동 (이동은 링크 기본 동작)
+function handleMenuClick(event) {
+  if (event.target.closest('a') !== null) {
+    setMenuOpen(false);
+  }
+}
+
+// Esc 키나 메뉴 바깥을 누르면 닫기
+function handleMenuKey(event) {
+  if (event.key === 'Escape' && menuToggle.getAttribute('aria-expanded') === 'true') {
+    setMenuOpen(false);
+    menuToggle.focus();
+  }
+}
+
+function handleOutsideClick(event) {
+  if (menuToggle.getAttribute('aria-expanded') === 'true' && !topbar.contains(event.target)) {
+    setMenuOpen(false);
+  }
+}
+
+// 넓은 화면으로 바뀌면 열림 상태를 초기화 (넓은 화면에서는 메뉴가 항상 보임)
+function handleScreenChange() {
+  if (wideScreen.matches) {
+    setMenuOpen(false);
+  }
+}
+
+menuToggle.addEventListener('click', toggleMenu);
+document.querySelector('.menu').addEventListener('click', handleMenuClick);
+document.addEventListener('keydown', handleMenuKey);
+document.addEventListener('click', handleOutsideClick);
+wideScreen.addEventListener('change', handleScreenChange);
+
+// 스크롤, 메뉴 이동(hash 변경), 뒤로 가기, 새로고침 뒤에도 실제 화면 기준으로 다시 계산
+window.addEventListener('scroll', requestMenuUpdate, { passive: true });
+window.addEventListener('resize', requestMenuUpdate);
+window.addEventListener('hashchange', requestMenuUpdate);
+window.addEventListener('popstate', requestMenuUpdate);
+window.addEventListener('pageshow', requestMenuUpdate);
+window.addEventListener('load', requestMenuUpdate);
+updateCurrentMenu();
+
+/* 8. 내 식물 목록: 저장된 신청을 물 줄 때로 걸러 보기 */
+const plantList = document.querySelector('#plant-list');
+const plantSummary = document.querySelector('#plant-summary');
+const plantMessage = document.querySelector('#plant-message');
+const plantsNone = document.querySelector('#plants-none');
+const plantsNoMatch = document.querySelector('#plants-no-match');
+const noMatchName = document.querySelector('#no-match-name');
+const filterButtons = document.querySelectorAll('.filter-button');
+const sampleButton = document.querySelector('#sample-button');
+const showAllButton = document.querySelector('#show-all-button');
+
+const filterNames = {
+  all: '전체',
+  due: '오늘 물 줄 식물',
+  week: '7일 안에',
+  later: '여유 있음',
+};
+let currentFilter = 'all';
+
+// 날짜를 "2026-11-03" 형태로 (저장용, 내 컴퓨터 날짜 기준)
+function toDateKey(date) {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return date.getFullYear() + '-' + month + '-' + day;
+}
+
+function fromDateKey(key) {
+  const parts = key.split('-');
+  return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+}
+
+// 마지막으로 물 준 날과 간격으로 다음 물주기 날짜·남은 날·필터 묶음 계산
+function getPlantStatus(record) {
+  const interval = record.interval || waterDays[record.plant] || 7;
+  const lastWatered = record.lastWatered || toDateKey(new Date(record.createdAt));
+  const nextDate = fromDateKey(lastWatered);
+  nextDate.setDate(nextDate.getDate() + interval);
+
+  const today = fromDateKey(toDateKey(new Date()));
+  const daysLeft = Math.round((nextDate - today) / 86400000);
+
+  let group = 'later';
+  if (daysLeft <= 0) {
+    group = 'due';
+  } else if (daysLeft <= 7) {
+    group = 'week';
+  }
+
+  let text = daysLeft + '일 뒤 · ' + formatDate(nextDate);
+  if (daysLeft < 0) {
+    text = '물 줄 날이 ' + -daysLeft + '일 지났어요';
+  } else if (daysLeft === 0) {
+    text = '오늘 물 주는 날이에요';
+  }
+
+  return { interval: interval, nextDate: nextDate, daysLeft: daysLeft, group: group, text: text };
+}
+
+function getPlantTypeName(plant) {
+  const option = signupType.querySelector('option[value="' + plant + '"]');
+  if (option === null) {
+    return '식물';
+  }
+  return option.text;
+}
+
+// 목록 한 칸 만들기
+function createPlantItem(record, status) {
+  const item = document.createElement('li');
+  const info = document.createElement('div');
+  const statusText = document.createElement('p');
+  const name = document.createElement('h3');
+  const meta = document.createElement('p');
+  const notice = document.createElement('p');
+  const actions = document.createElement('div');
+  const waterAction = document.createElement('button');
+  const removeAction = document.createElement('button');
+
+  item.className = 'plant-item is-' + status.group;
+  info.className = 'plant-info';
+  statusText.className = 'plant-status';
+  statusText.textContent = status.text;
+  name.className = 'plant-name';
+  name.textContent = record.name;
+  if (record.sample) {
+    const tag = document.createElement('span');
+    tag.className = 'sample-tag';
+    tag.textContent = '예시';
+    name.append(' ', tag);
+  }
+
+  meta.className = 'plant-meta';
+  meta.textContent =
+    getPlantTypeName(record.plant) + ' · ' + (placeNames[record.place] || '자리 정보 없음') +
+    ' · ' + status.interval + '일마다';
+  notice.className = 'plant-meta';
+  notice.textContent = '알림 ' + record.time + ' · ' + record.email + (record.phone ? ' · 문자 ' + record.phone : '');
+
+  actions.className = 'plant-actions';
+  waterAction.type = 'button';
+  waterAction.className = 'pick-button';
+  waterAction.dataset.action = 'water';
+  waterAction.dataset.id = record.id;
+  waterAction.textContent = '오늘 물 줬어요';
+  waterAction.setAttribute('aria-label', record.name + ' 오늘 물 줬어요');
+  removeAction.type = 'button';
+  removeAction.className = 'finder-close';
+  removeAction.dataset.action = 'remove';
+  removeAction.dataset.id = record.id;
+  removeAction.textContent = '삭제';
+  removeAction.setAttribute('aria-label', record.name + ' 목록에서 삭제');
+
+  info.append(statusText, name, meta, notice);
+  actions.append(waterAction, removeAction);
+  item.append(info, actions);
+  return item;
+}
+
+// 예전에 저장한 기록에 id가 없으면 붙여서 다시 저장
+function loadPlantRecords() {
+  const records = loadSignups();
+  let changed = false;
+
+  records.forEach(function (record, index) {
+    if (!record.id) {
+      record.id = 'old-' + index + '-' + Date.parse(record.createdAt);
+      changed = true;
+    }
+  });
+  if (changed) {
+    saveSignupList(records);
+  }
+  return records;
+}
+
+// 목록 다시 그리기: 필터 버튼 선택 표시·개수, 목록, 결과 안내를 함께 갱신
+function renderPlantList() {
+  const plants = loadPlantRecords().map(function (record) {
+    return { record: record, status: getPlantStatus(record) };
+  });
+  plants.sort(function (a, b) {
+    return a.status.daysLeft - b.status.daysLeft;
+  });
+
+  const counts = { all: plants.length, due: 0, week: 0, later: 0 };
+  plants.forEach(function (plant) {
+    counts[plant.status.group] += 1;
+  });
+
+  filterButtons.forEach(function (button) {
+    const isSelected = button.dataset.filter === currentFilter;
+    button.classList.toggle('is-active', isSelected);
+    button.setAttribute('aria-pressed', String(isSelected));
+    button.querySelector('.filter-count').textContent = counts[button.dataset.filter];
+  });
+
+  const shown = plants.filter(function (plant) {
+    return currentFilter === 'all' || plant.status.group === currentFilter;
+  });
+
+  plantList.textContent = '';
+  shown.forEach(function (plant) {
+    plantList.append(createPlantItem(plant.record, plant.status));
+  });
+
+  // 결과 안내: 전체 목록이 없는 경우와 조건에 맞는 결과만 없는 경우를 나눔
+  plantList.hidden = shown.length === 0;
+  plantsNone.hidden = plants.length > 0;
+  plantsNoMatch.hidden = plants.length === 0 || shown.length > 0;
+  noMatchName.textContent = filterNames[currentFilter];
+
+  if (plants.length === 0) {
+    plantSummary.textContent = '등록한 식물 0개';
+  } else if (currentFilter === 'all') {
+    plantSummary.textContent =
+      '전체 ' + plants.length + '개 식물을 물 줄 날이 가까운 순서로 보여 주고 있어요.';
+  } else {
+    plantSummary.textContent =
+      '전체 ' + plants.length + '개 중 ‘' + filterNames[currentFilter] + '’ ' + shown.length + '개를 보여 주고 있어요.';
+  }
+}
+
+function setPlantMessage(text, state) {
+  plantMessage.textContent = text;
+  plantMessage.className = 'plant-message ' + state;
+}
+
+function selectFilter(filter) {
+  currentFilter = filter;
+  setPlantMessage('', '');
+  renderPlantList();
+}
+
+function handleFilterClick(event) {
+  selectFilter(event.currentTarget.dataset.filter);
+}
+
+// 목록의 '오늘 물 줬어요'·'삭제' 버튼
+function handlePlantAction(event) {
+  const button = event.target.closest('[data-action]');
+  if (button === null) {
+    return;
+  }
+
+  const records = loadPlantRecords();
+  const index = records.findIndex(function (record) {
+    return record.id === button.dataset.id;
+  });
+  if (index === -1) {
+    return;
+  }
+
+  const record = records[index];
+  let message = '';
+
+  if (button.dataset.action === 'water') {
+    record.lastWatered = toDateKey(new Date());
+    message =
+      '‘' + record.name + '’ 물 준 날을 오늘로 기록했어요. 다음 물주기는 ' +
+      formatDate(getPlantStatus(record).nextDate) + '이에요.';
+  } else {
+    records.splice(index, 1);
+    message = '‘' + record.name + '’ 식물을 목록에서 뺐어요.';
+  }
+
+  if (!saveSignupList(records)) {
+    setPlantMessage('변경 내용을 저장하지 못했어요. 잠시 후 다시 눌러 주세요.', 'is-error');
+    return;
+  }
+
+  renderPlantList();
+  setPlantMessage(message, 'is-success');
+  plantMessage.focus();
+}
+
+// 목록이 비었을 때: 물 줄 때가 서로 다른 예시 식물 4개 넣기
+function addSamplePlants() {
+  const samples = [
+    { name: '덩굴이', plant: 'scindapsus', place: 'veranda', daysAgo: 6 },
+    { name: '풍성이', plant: 'fern', place: 'window', daysAgo: 2 },
+    { name: '몽이', plant: 'monstera', place: 'window', daysAgo: 2 },
+    { name: '뚜기', plant: 'stuckyi', place: 'room', daysAgo: 3 },
+  ];
+  const records = loadPlantRecords();
+
+  samples.forEach(function (sample, index) {
+    const watered = new Date();
+    watered.setDate(watered.getDate() - sample.daysAgo);
+    records.push({
+      id: 'sample-' + Date.now() + '-' + index,
+      sample: true,
+      email: 'sample@chorok.kr',
+      name: sample.name,
+      plant: sample.plant,
+      place: sample.place,
+      interval: getWaterInterval(sample.plant, sample.place),
+      phone: '',
+      time: '아침 8시',
+      createdAt: new Date().toISOString(),
+      lastWatered: toDateKey(watered),
+    });
+  });
+
+  if (!saveSignupList(records)) {
+    setPlantMessage('예시 식물을 저장하지 못했어요. 잠시 후 다시 눌러 주세요.', 'is-error');
+    return;
+  }
+
+  currentFilter = 'all';
+  renderPlantList();
+  setPlantMessage('예시 식물 4개를 넣었어요. 위의 버튼을 눌러 물 줄 때별로 골라 보세요.', 'is-success');
+  plantMessage.focus();
+}
+
+filterButtons.forEach(function (button) {
+  button.addEventListener('click', handleFilterClick);
+});
+plantList.addEventListener('click', handlePlantAction);
+sampleButton.addEventListener('click', addSamplePlants);
+showAllButton.addEventListener('click', function () {
+  selectFilter('all');
+});
+// 다른 탭에서 신청 기록이 바뀌면 목록도 갱신
+window.addEventListener('storage', renderPlantList);
+renderPlantList();

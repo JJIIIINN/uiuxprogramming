@@ -24,21 +24,37 @@
                  확인 화면에서 수신 동의 후 신청하면 완료 화면 표시
       신청 흐름: 시작 → 내 식물 → 알림 받기 → 확인 → 완료
       중간고사 추가: 내 식물 단계에서 종류를 모르면 생김새로 찾아 바로 선택
-      정보 순서: 소개 → 주요 기능 → 이용 방법 → 알림 신청
+      정보 순서: 소개 → 주요 기능 → 이용 방법 → 알림 신청 → 내 식물 목록
+      10주차: 상단 메뉴 현재 위치 표시·모바일 메뉴, 내 식물 목록과 물 줄 때 필터
     -->
 
-    <header>
+    <header class="site-header">
       <div class="topbar">
-        <a class="brand" href="#">초록집사</a>
-        <nav aria-label="주요 메뉴">
-          <a href="#about">서비스 소개</a>
-          <a href="#features">주요 기능</a>
-          <a href="#steps">이용 방법</a>
-          <a href="#subscribe">알림 신청</a>
+        <a class="brand" href="#top">초록집사</a>
+        <button
+          type="button"
+          class="menu-toggle"
+          id="menu-toggle"
+          aria-expanded="false"
+          aria-controls="main-menu"
+        >
+          <span class="menu-icon" aria-hidden="true"></span>
+          <span class="menu-label">메뉴 열기</span>
+        </button>
+        <nav class="main-nav" aria-label="주요 메뉴">
+          <ul class="menu" id="main-menu">
+            <li><a href="#about">서비스 소개</a></li>
+            <li><a href="#features">주요 기능</a></li>
+            <li><a href="#steps">이용 방법</a></li>
+            <li><a href="#subscribe">알림 신청</a></li>
+            <li><a href="#my-plants">내 식물 목록</a></li>
+          </ul>
         </nav>
       </div>
+    </header>
 
-      <div class="hero">
+    <main>
+      <div class="hero" id="top">
         <h1>식물 초보도<br />물 줄 날을 놓치지 않게</h1>
         <p class="tagline">
           식물 종류와 놓아둔 자리에 맞춰 물 주는 날을 알려 주고,
@@ -46,9 +62,7 @@
         </p>
         <a class="hero-cta" href="#subscribe">물주기 알림 받기</a>
       </div>
-    </header>
 
-    <main>
       <section id="about">
         <h2>서비스 소개</h2>
         <h3>처음 키우는 식물도 시들지 않게 돌보는 방법</h3>
@@ -622,10 +636,10 @@
                 type="button"
                 class="edit-button"
                 id="submit-fix"
-                data-goto="2"
+                data-goto="1"
                 hidden
               >
-                이메일 바꾸러 가기
+                식물 이름·이메일 고치러 가기
               </button>
             </div>
             <div class="flow-actions">
@@ -649,6 +663,9 @@
             <h3 tabindex="-1">물주기 알림 신청 완료</h3>
             <p id="done-message"></p>
             <div class="flow-actions">
+              <a class="button secondary" href="#my-plants" id="done-list-link">
+                내 식물 목록 보기
+              </a>
               <button type="button" class="button" id="restart-button">
                 처음부터 다시 신청하기
               </button>
@@ -659,6 +676,93 @@
         <p class="form-note">
           알림은 일주일에 한 번 이하로 보내며, 언제든지 취소할 수 있습니다.
         </p>
+      </section>
+
+      <!-- 10주차: 알림을 신청한 식물 목록과 물 줄 때 필터 -->
+      <section id="my-plants" class="plants-section" aria-labelledby="my-plants-title">
+        <h2 id="my-plants-title">내 식물 목록</h2>
+        <p>
+          물주기 알림을 신청한 식물이 이 브라우저에 저장돼요. 물 줄 날이 가까운
+          식물부터 보여 드려요.
+        </p>
+
+        <div class="plant-filters" role="group" aria-labelledby="filter-label">
+          <p id="filter-label" class="filter-label">물 줄 때로 골라 보기</p>
+          <div class="filter-buttons">
+            <button
+              type="button"
+              class="filter-button is-active"
+              data-filter="all"
+              aria-pressed="true"
+            >
+              전체 <span class="filter-count">0</span>
+            </button>
+            <button
+              type="button"
+              class="filter-button"
+              data-filter="due"
+              aria-pressed="false"
+            >
+              오늘 물 줄 식물 <span class="filter-count">0</span>
+            </button>
+            <button
+              type="button"
+              class="filter-button"
+              data-filter="week"
+              aria-pressed="false"
+            >
+              7일 안에 <span class="filter-count">0</span>
+            </button>
+            <button
+              type="button"
+              class="filter-button"
+              data-filter="later"
+              aria-pressed="false"
+            >
+              여유 있음 <span class="filter-count">0</span>
+            </button>
+          </div>
+          <p class="field-help">
+            물 줄 날까지 남은 날로 나눠요. 오늘 물 줄 식물: 오늘이거나 이미 지남 ·
+            7일 안에: 1~7일 남음 · 여유 있음: 8일 이상 남음
+          </p>
+        </div>
+
+        <p id="plant-summary" class="plant-summary" aria-live="polite"></p>
+        <p id="plant-message" class="plant-message" tabindex="-1" aria-live="polite"></p>
+
+        <ul id="plant-list" class="plant-list"></ul>
+
+        <!-- 등록한 식물이 하나도 없을 때 -->
+        <div id="plants-none" class="plants-empty" hidden>
+          <p class="plants-empty-title">아직 등록한 식물이 없어요.</p>
+          <p>
+            물주기 알림을 신청하면 식물이 여기에 쌓여요. 먼저 둘러보고 싶다면 예시
+            식물을 넣어 볼 수 있어요.
+          </p>
+          <div class="plants-empty-actions">
+            <a class="button" href="#subscribe">알림 신청하러 가기</a>
+            <button type="button" class="button secondary" id="sample-button">
+              예시 식물 넣어 보기
+            </button>
+          </div>
+        </div>
+
+        <!-- 식물은 있지만 고른 조건에 맞는 식물이 없을 때 -->
+        <div id="plants-no-match" class="plants-empty" hidden>
+          <p class="plants-empty-title">
+            ‘<span id="no-match-name"></span>’에 해당하는 식물이 없어요.
+          </p>
+          <p>
+            등록한 식물은 있지만 이 조건에 맞는 식물은 없어요. 다른 조건을 고르거나
+            전체 목록을 확인해 보세요.
+          </p>
+          <div class="plants-empty-actions">
+            <button type="button" class="button secondary" id="show-all-button">
+              전체 보기
+            </button>
+          </div>
+        </div>
       </section>
     </main>
 
