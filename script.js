@@ -42,15 +42,16 @@ function getDateAfter(days) {
 const tabs = document.querySelectorAll('.tab');
 const tabPanels = document.querySelectorAll('.tab-panel');
 
-// 누른 탭만 선택 상태로 바꾸고, 연결된 내용만 보이기
-function showTab(event) {
-  const selectedTab = event.currentTarget;
+// 고른 탭만 선택 상태로 바꾸고, 연결된 내용만 보이기
+// 선택된 탭만 Tab 키로 들어오고(tabindex 0), 나머지 탭은 방향키로 이동(tabindex -1)
+function selectTab(selectedTab) {
   const panelId = selectedTab.getAttribute('aria-controls');
 
   tabs.forEach(function (tab) {
     const isSelected = tab === selectedTab;
     tab.classList.toggle('is-active', isSelected);
     tab.setAttribute('aria-selected', isSelected);
+    tab.tabIndex = isSelected ? 0 : -1;
   });
 
   tabPanels.forEach(function (panel) {
@@ -58,8 +59,36 @@ function showTab(event) {
   });
 }
 
+function showTab(event) {
+  selectTab(event.currentTarget);
+}
+
+// 키보드: ← → 로 이전·다음 탭, Home·End로 처음·마지막 탭
+function handleTabKey(event) {
+  const list = Array.from(tabs);
+  const index = list.indexOf(event.currentTarget);
+  let next = -1;
+
+  if (event.key === 'ArrowRight') {
+    next = (index + 1) % list.length;
+  } else if (event.key === 'ArrowLeft') {
+    next = (index - 1 + list.length) % list.length;
+  } else if (event.key === 'Home') {
+    next = 0;
+  } else if (event.key === 'End') {
+    next = list.length - 1;
+  }
+
+  if (next !== -1) {
+    event.preventDefault();
+    selectTab(list[next]);
+    list[next].focus();
+  }
+}
+
 tabs.forEach(function (tab) {
   tab.addEventListener('click', showTab);
+  tab.addEventListener('keydown', handleTabKey);
 });
 
 /* 2. 물주기 간격 계산 */
@@ -103,6 +132,7 @@ function handleWater() {
     '기록했어요! 다음 물주기는 ' + formatDate(nextDate) + '이에요.',
     'success'
   );
+  waterResult.focus();
 }
 
 plantTypeSelect.addEventListener('change', updateWaterPlan);
@@ -116,30 +146,35 @@ const diagnosisResult = document.querySelector('#diagnosis-result');
 const diagnoses = {
   healthy: {
     type: 'success',
+    level: '건강',
     text: '건강한 상태예요. 지금처럼 물주기 일정을 지켜 주세요.',
   },
   yellow: {
     type: 'error',
+    level: '바로 조치 필요',
     text: '과습이 의심돼요. 겉흙이 마를 때까지 물을 멈추고 화분 받침의 물을 버려 주세요.',
   },
   brown: {
     type: 'warning',
+    level: '주의',
     text: '물이나 습도가 부족해요. 흙이 말랐는지 손가락으로 확인하고 잎에 분무해 주세요.',
   },
   pale: {
     type: 'warning',
+    level: '주의',
     text: '빛이 부족해요. 창가로 옮겨 하루 4시간 이상 밝은 빛을 받게 해 주세요.',
   },
   bugs: {
     type: 'error',
+    level: '바로 조치 필요',
     text: '해충일 수 있어요. 다른 식물과 떨어뜨리고 젖은 휴지로 잎 앞뒤를 닦아 주세요.',
   },
 };
 
-// 고른 증상에 맞는 진단 결과 보여 주기
+// 고른 증상에 맞는 진단 결과 보여 주기 (심각도를 색뿐 아니라 '건강·주의·바로 조치 필요' 문구로도)
 function handleSymptom(event) {
   const diagnosis = diagnoses[event.target.value];
-  showMessage(diagnosisResult, diagnosis.text, diagnosis.type);
+  showMessage(diagnosisResult, diagnosis.level + ' · ' + diagnosis.text, diagnosis.type);
 }
 
 symptomGroup.addEventListener('change', handleSymptom);
@@ -185,6 +220,7 @@ function addDiary() {
   memoInput.value = '';
   handleMemoInput();
   showMessage(diaryMessage, '오늘의 메모를 성장 일지에 남겼어요.', 'success');
+  memoInput.focus();
 }
 
 memoInput.addEventListener('input', handleMemoInput);
@@ -656,6 +692,7 @@ function getDoneMessage() {
 function sendSignup() {
   setSubmitting(true);
   showSubmitStatus('신청 내용을 보내는 중이에요. 잠시만 기다려 주세요.', 'is-progress', false);
+  submitStatus.focus();
   setTimeout(finishSignup, 1500);
 }
 
@@ -1288,7 +1325,13 @@ function renderPlantList() {
     const isSelected = button.dataset.filter === currentFilter;
     button.classList.toggle('is-active', isSelected);
     button.setAttribute('aria-pressed', String(isSelected));
-    button.querySelector('.filter-count').textContent = counts[button.dataset.filter];
+    // 숫자 뒤 '개'는 화면 낭독기에만 읽힘 (예: "오늘 물 줄 식물 2개")
+    const count = button.querySelector('.filter-count');
+    const unit = document.createElement('span');
+    unit.className = 'sr-only';
+    unit.textContent = '개';
+    count.textContent = counts[button.dataset.filter];
+    count.append(unit);
   });
 
   const shown = plants.filter(function (plant) {

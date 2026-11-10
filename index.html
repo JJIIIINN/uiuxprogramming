@@ -15,6 +15,7 @@
   </head>
 
   <body>
+    <a class="skip-link" href="#main">본문 바로가기</a>
     <!--
       서비스명: 초록집사
       사용자: 식물을 처음 키우는 자취생·직장인, 물 주는 시기를 자주 놓치는 사람
@@ -26,11 +27,12 @@
       중간고사 추가: 내 식물 단계에서 종류를 모르면 생김새로 찾아 바로 선택
       정보 순서: 소개 → 주요 기능 → 이용 방법 → 알림 신청 → 내 식물 목록
       10주차: 상단 메뉴 현재 위치 표시·모바일 메뉴, 내 식물 목록과 물 줄 때 필터
+      11주차: 색 대비, 색 외 상태 표시, 초점 표시, 본문 바로가기, 탭 방향키, 버튼 이름
     -->
 
     <header class="site-header">
       <div class="topbar">
-        <a class="brand" href="#top">초록집사</a>
+        <a class="brand" href="#top" aria-label="초록집사 처음 화면으로">초록집사</a>
         <button
           type="button"
           class="menu-toggle"
@@ -53,7 +55,7 @@
       </div>
     </header>
 
-    <main>
+    <main id="main" tabindex="-1">
       <div class="hero" id="top">
         <h1>식물 초보도<br />물 줄 날을 놓치지 않게</h1>
         <p class="tagline">
@@ -87,7 +89,7 @@
         <h2>주요 기능</h2>
         <p>탭을 눌러 초록집사의 세 가지 기능을 직접 써 보세요.</p>
 
-        <div class="tabs" role="tablist" aria-label="주요 기능">
+        <div class="tabs" role="tablist" aria-label="주요 기능 (← → 키로 이동)">
           <button
             type="button"
             class="tab is-active"
@@ -103,6 +105,7 @@
             class="tab"
             id="tab-diagnosis"
             role="tab"
+            tabindex="-1"
             aria-selected="false"
             aria-controls="panel-diagnosis"
           >
@@ -113,6 +116,7 @@
             class="tab"
             id="tab-diary"
             role="tab"
+            tabindex="-1"
             aria-selected="false"
             aria-controls="panel-diary"
           >
@@ -161,7 +165,12 @@
               오늘 물 줬어요
             </button>
           </div>
-          <p id="water-result" class="form-message info" aria-live="polite">
+          <p
+            id="water-result"
+            class="form-message info"
+            aria-live="polite"
+            tabindex="-1"
+          >
             식물 종류와 놓아둔 자리를 고르면 물주기 간격을 알려 드려요.
           </p>
         </div>
@@ -358,7 +367,12 @@
               >
                 <div class="finder-head">
                   <h4 id="finder-title">생김새로 식물 찾기</h4>
-                  <button type="button" class="finder-close" id="finder-close">
+                  <button
+                    type="button"
+                    class="finder-close"
+                    id="finder-close"
+                    aria-label="생김새로 찾기 닫기"
+                  >
                     닫기
                   </button>
                 </div>
@@ -588,7 +602,12 @@
               <div class="summary-group">
                 <div class="summary-head">
                   <h4>내 식물</h4>
-                  <button type="button" class="edit-button" data-goto="1">
+                  <button
+                    type="button"
+                    class="edit-button"
+                    data-goto="1"
+                    aria-label="내 식물 정보 수정"
+                  >
                     수정
                   </button>
                 </div>
@@ -602,7 +621,12 @@
               <div class="summary-group">
                 <div class="summary-head">
                   <h4>알림 받기</h4>
-                  <button type="button" class="edit-button" data-goto="2">
+                  <button
+                    type="button"
+                    class="edit-button"
+                    data-goto="2"
+                    aria-label="알림 받기 정보 수정"
+                  >
                     수정
                   </button>
                 </div>
@@ -630,7 +654,13 @@
             </div>
             <p class="step-alert" role="alert"></p>
             <!-- 제출 중·실패 안내 -->
-            <div id="submit-status" class="submit-status" role="status" hidden>
+            <div
+              id="submit-status"
+              class="submit-status"
+              role="status"
+              tabindex="-1"
+              hidden
+            >
               <p id="submit-status-text"></p>
               <button
                 type="button"
