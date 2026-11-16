@@ -28,6 +28,8 @@
       정보 순서: 소개 → 주요 기능 → 이용 방법 → 알림 신청 → 내 식물 목록
       10주차: 상단 메뉴 현재 위치 표시·모바일 메뉴, 내 식물 목록과 물 줄 때 필터
       11주차: 색 대비, 색 외 상태 표시, 초점 표시, 본문 바로가기, 탭 방향키, 버튼 이름
+      12주차: 재사용 UI 컴포넌트 - 모달(계산 기준 안내·삭제 확인), 아코디언(자주 묻는 질문),
+              탭을 공통 함수로 정리
     -->
 
     <header class="site-header">
@@ -50,6 +52,7 @@
             <li><a href="#steps">이용 방법</a></li>
             <li><a href="#subscribe">알림 신청</a></li>
             <li><a href="#my-plants">내 식물 목록</a></li>
+            <li><a href="#faq">자주 묻는 질문</a></li>
           </ul>
         </nav>
       </div>
@@ -173,6 +176,15 @@
           >
             식물 종류와 놓아둔 자리를 고르면 물주기 간격을 알려 드려요.
           </p>
+          <!-- 12주차: 같은 모달을 여는 버튼 (자주 묻는 질문에도 하나 더 있음) -->
+          <button
+            type="button"
+            class="text-button"
+            data-modal-open="interval-modal"
+            aria-haspopup="dialog"
+          >
+            물주기 간격 계산 기준 보기
+          </button>
         </div>
 
         <div
@@ -794,11 +806,286 @@
           </div>
         </div>
       </section>
+
+      <!-- 12주차: 자주 묻는 질문 (아코디언) -->
+      <section id="faq" aria-labelledby="faq-title">
+        <h2 id="faq-title">자주 묻는 질문</h2>
+        <p>
+          처음 쓰는 분들이 자주 묻는 내용을 모았어요. 질문을 누르면 답이
+          펼쳐지고, 다시 누르면 접혀요.
+        </p>
+
+        <div class="accordion" data-accordion>
+          <div class="accordion-toolbar">
+            <p class="accordion-status" aria-live="polite"></p>
+            <button type="button" class="text-button" data-accordion-all>
+              모두 펼치기
+            </button>
+          </div>
+
+          <div class="accordion-item">
+            <h3 class="accordion-heading">
+              <button
+                type="button"
+                class="accordion-trigger"
+                id="faq-q1"
+                aria-expanded="false"
+                aria-controls="faq-a1"
+              >
+                <span class="accordion-question">물주기 간격은 어떻게 정해지나요?</span>
+                <span class="accordion-state" aria-hidden="true">펼치기</span>
+              </button>
+            </h3>
+            <div
+              class="accordion-panel"
+              id="faq-a1"
+              role="region"
+              aria-labelledby="faq-q1"
+              hidden
+            >
+              <p>
+                식물마다 정해 둔 기본 간격에 놓아둔 자리의 비율을 곱해요. 햇빛 드는
+                창가는 흙이 빨리 말라서 0.8배, 빛이 적은 방 안은 1.2배예요. 예를
+                들어 몬스테라(7일)를 창가에 두면 6일마다 물을 줘요.
+              </p>
+              <button
+                type="button"
+                class="text-button"
+                data-modal-open="interval-modal"
+                aria-haspopup="dialog"
+              >
+                식물별 계산 기준표 보기
+              </button>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h3 class="accordion-heading">
+              <button
+                type="button"
+                class="accordion-trigger"
+                id="faq-q2"
+                aria-expanded="false"
+                aria-controls="faq-a2"
+              >
+                <span class="accordion-question">물주기 알림은 언제, 어떻게 오나요?</span>
+                <span class="accordion-state" aria-hidden="true">펼치기</span>
+              </button>
+            </h3>
+            <div
+              class="accordion-panel"
+              id="faq-a2"
+              role="region"
+              aria-labelledby="faq-q2"
+              hidden
+            >
+              <p>
+                물 줄 날 아침 8시·낮 12시·저녁 8시 중 고른 시간(또는 직접 정한
+                시간)에 메일로 보내 드려요. 문자 알림을 켜면 같은 시간에 문자도
+                함께 가요. 알림은 일주일에 한 번 이하로만 보내요.
+              </p>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h3 class="accordion-heading">
+              <button
+                type="button"
+                class="accordion-trigger"
+                id="faq-q3"
+                aria-expanded="false"
+                aria-controls="faq-a3"
+              >
+                <span class="accordion-question">키우는 식물의 종류를 모르겠어요.</span>
+                <span class="accordion-state" aria-hidden="true">펼치기</span>
+              </button>
+            </h3>
+            <div
+              class="accordion-panel"
+              id="faq-a3"
+              role="region"
+              aria-labelledby="faq-q3"
+              hidden
+            >
+              <p>
+                알림 신청의 ‘내 식물’ 단계에서 <strong>종류를 모르겠어요 · 생김새로
+                찾기</strong>를 누르고 “구멍 난 잎”, “덩굴”처럼 생김새를 입력하면
+                비슷한 식물을 골라 드려요. 찾지 못하면 기타 관엽식물(7일마다)로
+                등록하고 나중에 바꿀 수 있어요.
+              </p>
+              <a class="text-button" href="#subscribe">알림 신청으로 이동</a>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h3 class="accordion-heading">
+              <button
+                type="button"
+                class="accordion-trigger"
+                id="faq-q4"
+                aria-expanded="false"
+                aria-controls="faq-a4"
+              >
+                <span class="accordion-question">예정보다 일찍 물을 줬어요. 다음 알림 날짜가 바뀌나요?</span>
+                <span class="accordion-state" aria-hidden="true">펼치기</span>
+              </button>
+            </h3>
+            <div
+              class="accordion-panel"
+              id="faq-a4"
+              role="region"
+              aria-labelledby="faq-q4"
+              hidden
+            >
+              <p>
+                네. 내 식물 목록에서 그 식물의 <strong>오늘 물 줬어요</strong>를
+                누르면 물 준 날이 오늘로 바뀌고, 다음 물 줄 날도 오늘부터 다시
+                계산돼요.
+              </p>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h3 class="accordion-heading">
+              <button
+                type="button"
+                class="accordion-trigger"
+                id="faq-q5"
+                aria-expanded="false"
+                aria-controls="faq-a5"
+              >
+                <span class="accordion-question">알림을 그만 받고 싶어요.</span>
+                <span class="accordion-state" aria-hidden="true">펼치기</span>
+              </button>
+            </h3>
+            <div
+              class="accordion-panel"
+              id="faq-a5"
+              role="region"
+              aria-labelledby="faq-q5"
+              hidden
+            >
+              <p>
+                내 식물 목록에서 그 식물의 <strong>삭제</strong>를 누르면 확인 창이
+                떠요. <strong>삭제하기</strong>를 누르면 목록과 알림에서 빠져요.
+                실수로 눌렀다면 확인 창에서 <strong>취소</strong>하거나 Esc 키를
+                누르세요.
+              </p>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h3 class="accordion-heading">
+              <button
+                type="button"
+                class="accordion-trigger"
+                id="faq-q6"
+                aria-expanded="false"
+                aria-controls="faq-a6"
+              >
+                <span class="accordion-question">등록한 식물은 어디에 저장되나요?</span>
+                <span class="accordion-state" aria-hidden="true">펼치기</span>
+              </button>
+            </h3>
+            <div
+              class="accordion-panel"
+              id="faq-a6"
+              role="region"
+              aria-labelledby="faq-q6"
+              hidden
+            >
+              <p>
+                지금은 체험판이라 이 브라우저에만 저장돼요. 다른 기기나 다른
+                브라우저에서는 보이지 않고, 브라우저의 사이트 데이터를 지우면 목록도
+                함께 지워져요.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <footer>
       <small>© 2026 초록집사. 식물 초보를 위한 반려식물 돌봄 서비스</small>
     </footer>
+
+    <!-- 12주차: 모달. 공통 클래스(.modal)와 공통 함수(openModal·closeModal)로 두 가지를 만듦 -->
+    <dialog class="modal" id="interval-modal" aria-labelledby="interval-modal-title">
+      <div class="modal-box">
+        <div class="modal-head">
+          <h2 class="modal-title" id="interval-modal-title">물주기 간격은 이렇게 계산해요</h2>
+          <button
+            type="button"
+            class="modal-close"
+            data-modal-close
+            aria-label="계산 기준 창 닫기"
+          >
+            <span aria-hidden="true">✕</span> 닫기
+          </button>
+        </div>
+        <p class="modal-formula">
+          <strong>식물별 기본 간격 × 놓아둔 자리 비율</strong> (반올림)
+        </p>
+        <p>
+          햇빛이 잘 드는 곳일수록 흙이 빨리 말라서 물을 더 자주 줘요. 창가는 0.8배,
+          베란다는 1배, 빛이 적은 방 안은 1.2배로 계산해요.
+        </p>
+        <!-- 좁은 화면에서 표가 넘치면 가로로 스크롤 (키보드로도 스크롤할 수 있게 tabindex) -->
+        <div
+          class="modal-table-wrap"
+          role="region"
+          aria-label="식물별 물주기 간격 표"
+          tabindex="0"
+        >
+          <table class="modal-table">
+            <caption class="sr-only">식물 종류와 놓아둔 자리별 물주기 간격(일)</caption>
+            <thead>
+              <tr>
+                <th scope="col">식물</th>
+                <th scope="col">기본</th>
+                <th scope="col">창가 ×0.8</th>
+                <th scope="col">베란다 ×1</th>
+                <th scope="col">방 안 ×1.2</th>
+              </tr>
+            </thead>
+            <tbody id="interval-table"></tbody>
+          </table>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="button" data-modal-close data-modal-focus>
+            확인했어요
+          </button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog
+      class="modal modal-small"
+      id="confirm-modal"
+      aria-labelledby="confirm-modal-title"
+      aria-describedby="confirm-modal-text"
+    >
+      <div class="modal-box">
+        <div class="modal-head">
+          <h2 class="modal-title" id="confirm-modal-title"></h2>
+          <button
+            type="button"
+            class="modal-close"
+            data-modal-close
+            aria-label="삭제 확인 창 닫기"
+          >
+            <span aria-hidden="true">✕</span> 닫기
+          </button>
+        </div>
+        <p id="confirm-modal-text"></p>
+        <div class="modal-actions">
+          <button type="button" class="button secondary" data-modal-close data-modal-focus>
+            취소
+          </button>
+          <button type="button" class="button danger" id="confirm-modal-ok"></button>
+        </div>
+      </div>
+    </dialog>
 
     <script src="script.js"></script>
   </body>

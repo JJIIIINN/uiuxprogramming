@@ -38,58 +38,62 @@ function getDateAfter(days) {
   return date;
 }
 
-/* 1. 주요 기능 탭 */
-const tabs = document.querySelectorAll('.tab');
-const tabPanels = document.querySelectorAll('.tab-panel');
+/* 1. 탭 (12주차: 어느 탭 묶음에도 쓸 수 있는 공통 함수로 정리)
+   HTML 약속: role="tablist" 안의 role="tab" 버튼마다 aria-controls로 내용(role="tabpanel")을 연결 */
 
 // 고른 탭만 선택 상태로 바꾸고, 연결된 내용만 보이기
 // 선택된 탭만 Tab 키로 들어오고(tabindex 0), 나머지 탭은 방향키로 이동(tabindex -1)
-function selectTab(selectedTab) {
-  const panelId = selectedTab.getAttribute('aria-controls');
-
+function selectTab(tabs, selectedTab) {
   tabs.forEach(function (tab) {
     const isSelected = tab === selectedTab;
     tab.classList.toggle('is-active', isSelected);
-    tab.setAttribute('aria-selected', isSelected);
+    tab.setAttribute('aria-selected', String(isSelected));
     tab.tabIndex = isSelected ? 0 : -1;
-  });
-
-  tabPanels.forEach(function (panel) {
-    panel.hidden = panel.id !== panelId;
+    document.getElementById(tab.getAttribute('aria-controls')).hidden = !isSelected;
   });
 }
 
-function showTab(event) {
-  selectTab(event.currentTarget);
-}
-
-// 키보드: ← → 로 이전·다음 탭, Home·End로 처음·마지막 탭
-function handleTabKey(event) {
-  const list = Array.from(tabs);
-  const index = list.indexOf(event.currentTarget);
-  let next = -1;
-
-  if (event.key === 'ArrowRight') {
-    next = (index + 1) % list.length;
-  } else if (event.key === 'ArrowLeft') {
-    next = (index - 1 + list.length) % list.length;
-  } else if (event.key === 'Home') {
-    next = 0;
-  } else if (event.key === 'End') {
-    next = list.length - 1;
+// ← → 로 이전·다음, Home·End로 처음·마지막 항목의 번호 (해당 키가 아니면 -1)
+// 탭과 아코디언이 함께 사용 (아코디언은 ↑ ↓)
+function getMoveIndex(key, index, length, prevKey, nextKey) {
+  if (key === nextKey) {
+    return (index + 1) % length;
   }
+  if (key === prevKey) {
+    return (index - 1 + length) % length;
+  }
+  if (key === 'Home') {
+    return 0;
+  }
+  if (key === 'End') {
+    return length - 1;
+  }
+  return -1;
+}
 
-  if (next !== -1) {
+function initTabs(tablist) {
+  const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
+
+  tablist.addEventListener('click', function (event) {
+    const tab = event.target.closest('[role="tab"]');
+    if (tab !== null) {
+      selectTab(tabs, tab);
+    }
+  });
+
+  tablist.addEventListener('keydown', function (event) {
+    const index = tabs.indexOf(event.target);
+    const next = getMoveIndex(event.key, index, tabs.length, 'ArrowLeft', 'ArrowRight');
+    if (index === -1 || next === -1) {
+      return;
+    }
     event.preventDefault();
-    selectTab(list[next]);
-    list[next].focus();
-  }
+    selectTab(tabs, tabs[next]);
+    tabs[next].focus();
+  });
 }
 
-tabs.forEach(function (tab) {
-  tab.addEventListener('click', showTab);
-  tab.addEventListener('keydown', handleTabKey);
-});
+document.querySelectorAll('[role="tablist"]').forEach(initTabs);
 
 /* 2. 물주기 간격 계산 */
 const plantTypeSelect = document.querySelector('#plant-type');
@@ -1097,6 +1101,13 @@ function updateCurrentMenu() {
     }
   });
 
+  // 12주차: 페이지 맨 아래까지 내리면 마지막 영역(자주 묻는 질문)이 35% 지점에 닿지 못해도 현재 위치로
+  const atBottom =
+    window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+  if (atBottom && menuSections[menuSections.length - 1].getBoundingClientRect().top < window.innerHeight) {
+    currentIndex = menuSections.length - 1;
+  }
+
   menuLinks.forEach(function (link, index) {
     if (index === currentIndex) {
       link.setAttribute('aria-current', 'location');
@@ -1281,6 +1292,8 @@ function createPlantItem(record, status) {
   removeAction.className = 'finder-close';
   removeAction.dataset.action = 'remove';
   removeAction.dataset.id = record.id;
+  removeAction.dataset.name = record.name;
+  removeAction.setAttribute('aria-haspopup', 'dialog');
   removeAction.textContent = '삭제';
   removeAction.setAttribute('aria-label', record.name + ' 목록에서 삭제');
 
@@ -1375,42 +1388,82 @@ function handleFilterClick(event) {
   selectFilter(event.currentTarget.dataset.filter);
 }
 
-// 목록의 '오늘 물 줬어요'·'삭제' 버튼
-function handlePlantAction(event) {
-  const button = event.target.closest('[data-action]');
-  if (button === null) {
-    return;
-  }
-
+// 저장 목록에서 id로 기록을 찾아 바꾸고 저장 (change가 돌려준 문구를 성공 안내로 표시)
+function updatePlantRecord(id, change) {
   const records = loadPlantRecords();
   const index = records.findIndex(function (record) {
-    return record.id === button.dataset.id;
+    return record.id === id;
   });
   if (index === -1) {
     return;
   }
 
-  const record = records[index];
-  let message = '';
-
-  if (button.dataset.action === 'water') {
-    record.lastWatered = toDateKey(new Date());
-    message =
-      '‘' + record.name + '’ 물 준 날을 오늘로 기록했어요. 다음 물주기는 ' +
-      formatDate(getPlantStatus(record).nextDate) + '이에요.';
-  } else {
-    records.splice(index, 1);
-    message = '‘' + record.name + '’ 식물을 목록에서 뺐어요.';
-  }
+  const message = change(records, index);
 
   if (!saveSignupList(records)) {
     setPlantMessage('변경 내용을 저장하지 못했어요. 잠시 후 다시 눌러 주세요.', 'is-error');
+    plantMessage.focus();
     return;
   }
 
   renderPlantList();
   setPlantMessage(message, 'is-success');
   plantMessage.focus();
+}
+
+function waterPlant(records, index) {
+  const record = records[index];
+  record.lastWatered = toDateKey(new Date());
+  return (
+    '‘' + record.name + '’ 물 준 날을 오늘로 기록했어요. 다음 물주기는 ' +
+    formatDate(getPlantStatus(record).nextDate) + '이에요.'
+  );
+}
+
+function removePlant(records, index) {
+  const record = records.splice(index, 1)[0];
+  return '‘' + record.name + '’ 식물을 목록에서 삭제했어요.';
+}
+
+// 이름 끝 글자의 받침에 맞는 조사 고르기 (예: 몽이 → 를, 몬스테라 몽 → 을)
+function pickJosa(word, withFinal, withoutFinal) {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  if (code < 0 || code > 11171) {
+    return withFinal + '(' + withoutFinal + ')'; // 한글이 아니면 둘 다 표시
+  }
+  return code % 28 === 0 ? withoutFinal : withFinal;
+}
+
+// 목록의 '오늘 물 줬어요'는 바로 기록, '삭제'는 되돌릴 수 없으므로 확인 모달을 먼저 띄움
+function handlePlantAction(event) {
+  const button = event.target.closest('[data-action]');
+  if (button === null) {
+    return;
+  }
+
+  const id = button.dataset.id;
+
+  if (button.dataset.action === 'water') {
+    updatePlantRecord(id, waterPlant);
+    return;
+  }
+
+  const name = button.dataset.name;
+  askConfirm({
+    opener: button,
+    title: '‘' + name + '’' + pickJosa(name, '을', '를') + ' 목록에서 삭제할까요?',
+    text: '삭제하면 이 식물의 물주기 알림과 물 준 기록이 함께 사라지고 되돌릴 수 없어요.',
+    okText: '삭제하기',
+    onConfirm: function () {
+      updatePlantRecord(id, removePlant);
+    },
+    onCancel: function () {
+      setPlantMessage(
+        '삭제를 취소했어요. ‘' + name + '’' + pickJosa(name, '은', '는') + ' 목록에 그대로 있어요.',
+        'is-info'
+      );
+    },
+  });
 }
 
 // 목록이 비었을 때: 물 줄 때가 서로 다른 예시 식물 4개 넣기
@@ -1463,3 +1516,175 @@ showAllButton.addEventListener('click', function () {
 // 다른 탭에서 신청 기록이 바뀌면 목록도 갱신
 window.addEventListener('storage', renderPlantList);
 renderPlantList();
+
+/* 9. 모달 (12주차 공통 컴포넌트)
+   HTML 약속: <dialog class="modal">, 여는 버튼에 data-modal-open="모달 id",
+   닫는 버튼에 data-modal-close, 처음 초점을 받을 요소에 data-modal-focus
+   - showModal()로 열어 모달 바깥은 클릭·Tab 이동이 막힘(inert)
+   - Esc, 닫기 버튼, 바깥 어두운 영역 클릭으로 닫힘
+   - 닫히면 모달을 연 버튼으로 초점이 돌아감 */
+function openModal(modal, opener) {
+  modal.returnValue = '';
+  modal.returnFocus = opener || document.activeElement;
+  modal.showModal();
+  document.body.classList.add('is-modal-open');
+
+  const first = modal.querySelector('[data-modal-focus]') || modal.querySelector('[data-modal-close]');
+  first.focus();
+}
+
+// result: 어떤 버튼으로 닫았는지 ('ok' 또는 빈 문자열)
+function closeModal(modal, result) {
+  modal.close(result || '');
+}
+
+// 모든 모달이 함께 쓰는 닫힘 처리: 초점 복귀 → 모달별 후속 동작(afterClose) 실행
+function handleModalClose(event) {
+  const modal = event.currentTarget;
+  document.body.classList.remove('is-modal-open');
+
+  if (modal.returnFocus && modal.returnFocus.isConnected) {
+    modal.returnFocus.focus();
+  }
+  modal.returnFocus = null;
+
+  if (typeof modal.afterClose === 'function') {
+    const afterClose = modal.afterClose;
+    modal.afterClose = null;
+    afterClose(modal.returnValue);
+  }
+}
+
+// 모달 안: 닫기 버튼 / 바깥 어두운 영역(dialog 자신)을 누르면 닫기
+function handleModalClick(event) {
+  const modal = event.currentTarget;
+  if (event.target === modal || event.target.closest('[data-modal-close]') !== null) {
+    closeModal(modal);
+  }
+}
+
+// 페이지 어디서든 data-modal-open 버튼을 누르면 해당 모달 열기 (이벤트 위임)
+function handleModalOpen(event) {
+  const opener = event.target.closest('[data-modal-open]');
+  if (opener !== null) {
+    openModal(document.getElementById(opener.dataset.modalOpen), opener);
+  }
+}
+
+document.querySelectorAll('.modal').forEach(function (modal) {
+  modal.addEventListener('click', handleModalClick);
+  modal.addEventListener('close', handleModalClose);
+});
+document.addEventListener('click', handleModalOpen);
+
+// 확인 모달: 제목·설명·확인 버튼 문구를 바꿔 여러 곳에서 다시 쓸 수 있게
+const confirmModal = document.querySelector('#confirm-modal');
+const confirmTitle = document.querySelector('#confirm-modal-title');
+const confirmText = document.querySelector('#confirm-modal-text');
+const confirmOk = document.querySelector('#confirm-modal-ok');
+
+function askConfirm(options) {
+  confirmTitle.textContent = options.title;
+  confirmText.textContent = options.text;
+  confirmOk.textContent = options.okText;
+  confirmModal.afterClose = function (result) {
+    if (result === 'ok') {
+      options.onConfirm();
+    } else if (options.onCancel) {
+      options.onCancel();
+    }
+  };
+  openModal(confirmModal, options.opener);
+}
+
+confirmOk.addEventListener('click', function () {
+  closeModal(confirmModal, 'ok');
+});
+
+// 계산 기준 모달의 표: 신청 폼의 식물 목록과 계산 함수로 채움 (값을 두 번 적지 않도록)
+function fillIntervalTable() {
+  const body = document.querySelector('#interval-table');
+
+  Object.keys(waterDays).forEach(function (plant) {
+    const row = document.createElement('tr');
+    const name = document.createElement('th');
+    name.scope = 'row';
+    name.textContent = getPlantTypeName(plant);
+    row.append(name);
+
+    [waterDays[plant], getWaterInterval(plant, 'window'), getWaterInterval(plant, 'veranda'), getWaterInterval(plant, 'room')]
+      .forEach(function (days) {
+        const cell = document.createElement('td');
+        cell.textContent = days + '일';
+        row.append(cell);
+      });
+    body.append(row);
+  });
+}
+
+fillIntervalTable();
+
+/* 10. 아코디언 (12주차 공통 컴포넌트)
+   HTML 약속: data-accordion 묶음 안에 .accordion-trigger 버튼(aria-expanded, aria-controls)과
+   .accordion-panel(hidden), 상태 문구 .accordion-status, 모두 펼치기 버튼 data-accordion-all
+   - 질문을 누르면(Enter·Space 포함) 펼침 ↔ 접힘
+   - ↑ ↓ Home End로 질문 사이 이동
+   - 펼친 개수와 '모두 펼치기/모두 접기' 문구가 함께 바뀜 */
+function setAccordionItem(trigger, open) {
+  trigger.setAttribute('aria-expanded', String(open));
+  trigger.closest('.accordion-item').classList.toggle('is-open', open);
+  trigger.querySelector('.accordion-state').textContent = open ? '접기' : '펼치기';
+  document.getElementById(trigger.getAttribute('aria-controls')).hidden = !open;
+}
+
+function updateAccordionStatus(accordion) {
+  const triggers = accordion.querySelectorAll('.accordion-trigger');
+  const openCount = accordion.querySelectorAll('.accordion-trigger[aria-expanded="true"]').length;
+  const allButton = accordion.querySelector('[data-accordion-all]');
+  const status = accordion.querySelector('.accordion-status');
+
+  if (status !== null) {
+    status.textContent = '질문 ' + triggers.length + '개 중 ' + openCount + '개 펼침';
+  }
+  if (allButton !== null) {
+    allButton.textContent = openCount === triggers.length ? '모두 접기' : '모두 펼치기';
+  }
+}
+
+function initAccordion(accordion) {
+  const triggers = Array.from(accordion.querySelectorAll('.accordion-trigger'));
+
+  accordion.addEventListener('click', function (event) {
+    const trigger = event.target.closest('.accordion-trigger');
+    const allButton = event.target.closest('[data-accordion-all]');
+
+    if (trigger !== null) {
+      setAccordionItem(trigger, trigger.getAttribute('aria-expanded') !== 'true');
+    } else if (allButton !== null) {
+      const openAll = allButton.textContent.trim() === '모두 펼치기';
+      triggers.forEach(function (item) {
+        setAccordionItem(item, openAll);
+      });
+    } else {
+      return;
+    }
+    updateAccordionStatus(accordion);
+  });
+
+  accordion.addEventListener('keydown', function (event) {
+    const index = triggers.indexOf(event.target.closest('.accordion-trigger'));
+    const next = getMoveIndex(event.key, index, triggers.length, 'ArrowUp', 'ArrowDown');
+    if (index === -1 || next === -1) {
+      return;
+    }
+    event.preventDefault();
+    triggers[next].focus();
+  });
+
+  triggers.forEach(function (trigger) {
+    setAccordionItem(trigger, trigger.getAttribute('aria-expanded') === 'true');
+  });
+  updateAccordionStatus(accordion);
+}
+
+document.querySelectorAll('[data-accordion]').forEach(initAccordion);

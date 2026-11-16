@@ -633,6 +633,10 @@ textarea:focus {
 .finder-close:focus-visible,
 .keyword:focus-visible,
 .pick-button:focus-visible,
+.text-button:focus-visible,
+.accordion-trigger:focus-visible,
+.modal-close:focus-visible,
+.modal-table-wrap:focus-visible,
 .hero-cta:focus-visible,
 .brand:focus-visible,
 .skip-link:focus-visible,
@@ -1551,6 +1555,295 @@ footer {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), inset 0 -3px 0 var(--blue-600);
 }
 
+/* ===== 12주차: 재사용 UI 컴포넌트 ===== */
+
+/* 글자 버튼: 모달 열기·모두 펼치기처럼 보조 동작에 공통으로 사용 */
+.text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 16px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--blue-700);
+  background-color: var(--blue-100);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.text-button:hover {
+  color: var(--blue-800);
+  text-decoration: underline;
+}
+
+/* 되돌릴 수 없는 동작(삭제)용 빨간 버튼 */
+.button.danger {
+  background-color: var(--red-600);
+}
+
+.button.danger:hover {
+  background-color: #b31b29;
+}
+
+.button.danger:active {
+  background-color: #96151f;
+}
+
+.plant-message.is-info {
+  color: var(--grey-800);
+  background-color: var(--grey-100);
+}
+
+/* --- 모달: <dialog class="modal"> + .modal-box ---
+   열리면 뒤 화면을 어둡게(::backdrop) 덮고, 페이지 스크롤을 막음 */
+.modal {
+  width: min(640px, calc(100% - 32px));
+  max-height: calc(100% - 48px);
+  padding: 0; /* 바깥 어두운 영역 클릭 판정을 위해 여백은 .modal-box에 */
+  border: 0;
+  border-radius: 20px;
+  color: var(--grey-900);
+  background-color: var(--white);
+  box-shadow: 0 24px 48px rgba(25, 31, 40, 0.24);
+}
+
+.modal-small {
+  width: min(440px, calc(100% - 32px));
+}
+
+.modal[open] {
+  animation: modal-in 0.18s ease-out;
+}
+
+.modal::backdrop {
+  background-color: rgba(25, 31, 40, 0.55);
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+body.is-modal-open {
+  overflow: hidden;
+}
+
+.modal-box {
+  padding: 28px;
+  word-break: keep-all;
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.4;
+}
+
+.modal-close {
+  flex: none;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--grey-700);
+  background-color: var(--grey-100);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  color: var(--grey-900);
+  background-color: var(--grey-200);
+}
+
+.modal-formula {
+  padding: 12px 16px;
+  border-radius: 12px;
+  color: var(--blue-800);
+  background-color: var(--blue-100);
+}
+
+.modal-table-wrap {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+
+.modal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.modal-table th,
+.modal-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.modal-table thead th {
+  color: var(--grey-700);
+  background-color: var(--grey-50);
+  font-size: 14px;
+}
+
+.modal-table tbody th {
+  text-align: left;
+  font-weight: 700;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.modal-actions .button {
+  min-width: 120px;
+}
+
+/* --- 아코디언: [data-accordion] > .accordion-item > .accordion-trigger + .accordion-panel ---
+   펼친 질문은 + → − 기호, '펼치기' → '접기' 문구, 파란 왼쪽 막대와 배경으로 구분 */
+.accordion {
+  margin-top: 24px;
+}
+
+.accordion-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.accordion-toolbar .text-button {
+  margin-top: 0;
+}
+
+.accordion-status {
+  margin: 0;
+  color: var(--grey-700);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.accordion-item {
+  border: 1px solid var(--grey-200);
+  border-radius: 16px;
+  background-color: var(--white);
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.accordion-item + .accordion-item {
+  margin-top: 8px;
+}
+
+.accordion-item.is-open {
+  border-color: var(--blue-600);
+  background-color: var(--grey-50);
+  box-shadow: inset 4px 0 0 var(--blue-600);
+}
+
+.accordion-heading {
+  margin: 0;
+}
+
+.accordion-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 18px 20px 18px 24px;
+  border: 0;
+  border-radius: 16px;
+  color: var(--grey-900);
+  background-color: transparent;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: left;
+  word-break: keep-all;
+  cursor: pointer;
+}
+
+/* 초점 테두리를 항목 안쪽에 그려 옆 항목과 겹치지 않게 */
+.accordion-trigger:focus-visible {
+  outline-offset: -4px;
+}
+
+.accordion-trigger:hover .accordion-question {
+  text-decoration: underline;
+}
+
+.accordion-state {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  color: var(--grey-700);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 펼침 기호: 접혀 있으면 +, 펼치면 − */
+.accordion-state::before {
+  content: '+';
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: var(--grey-800);
+  background-color: var(--grey-100);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.is-open .accordion-state {
+  color: var(--blue-700);
+}
+
+.is-open .accordion-state::before {
+  content: '−';
+  color: var(--white);
+  background-color: var(--blue-600);
+}
+
+.accordion-panel {
+  padding: 0 24px 20px;
+}
+
+.accordion-panel p {
+  max-width: 720px;
+  margin-bottom: 0;
+  word-break: keep-all;
+}
+
+.accordion-panel strong {
+  color: var(--grey-900);
+}
+
 /* 움직임 줄이기 설정을 켠 사용자에게는 부드러운 스크롤·전환 효과를 끔 */
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -1734,5 +2027,47 @@ footer {
   footer {
     margin-top: 64px;
     padding-bottom: 40px;
+  }
+
+  /* 모달·아코디언: 좁은 화면에서 여백을 줄이고 버튼을 세로로 */
+  .modal-box {
+    padding: 22px 18px;
+  }
+
+  .modal-title {
+    font-size: 19px;
+  }
+
+  .modal-table {
+    font-size: 14px;
+    white-space: normal; /* 표 머리글·긴 식물 이름은 줄바꿈해서 화면 안에 맞춤 */
+    word-break: keep-all;
+  }
+
+  .modal-table th,
+  .modal-table td {
+    padding: 8px 6px;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .accordion-trigger {
+    padding: 16px 14px 16px 18px;
+    font-size: 16px;
+  }
+
+  .accordion-state {
+    font-size: 0; /* 좁은 화면에서는 +/− 기호만 (상태는 aria-expanded로 전달) */
+    gap: 0;
+  }
+
+  .accordion-state::before {
+    font-size: 18px;
+  }
+
+  .accordion-panel {
+    padding: 0 18px 18px;
   }
 }
