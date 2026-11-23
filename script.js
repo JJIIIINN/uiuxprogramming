@@ -1744,6 +1744,7 @@ const draftContinue = document.querySelector('#draft-continue');
 const draftRestart = document.querySelector('#draft-restart');
 
 let draftSavedAt = ''; // 마지막으로 임시 보관한 시각
+let draftCleared = false; // 방금 '처음부터 다시 작성'으로 지웠는지 (지웠다는 안내를 보여 주는 중)
 
 // 지금 화면의 입력값·선택값·진행 단계 모으기
 function collectDraft() {
@@ -1808,10 +1809,18 @@ function setText(target, text) {
 }
 
 // 임시 보관 표시줄 갱신. state: 'saved'(보관됨) · 'off'(보관할 수 없음) · ''(보관한 내용 없음 → 숨김)
-// 복구 직후(draftRestored)에는 복구 안내와 '이어서 작성하기' 버튼을 함께 보여 줌
+// 복구 직후(draftRestored)에는 복구 안내와 '안내 닫기' 버튼을 함께 보여 줌
+// 방금 지운 직후(draftCleared)에는 숨기는 대신 지웠다는 안내를 보여 줌 (사용자 테스트 1차 뒤 추가)
 function updateDraftBar(state) {
   const time = formatSavedTime(draftSavedAt);
   let savedText = '';
+
+  let noticeText = ''; // role="status" 문단에 넣어 화면 낭독기도 읽게 하는 안내
+
+  if (state === '' && draftCleared) {
+    state = 'cleared';
+    noticeText = '작성하던 내용을 모두 지웠어요. 처음부터 다시 작성할 수 있어요. 신청을 끝낸 식물은 내 식물 목록에 그대로 있어요.';
+  }
 
   if (state === 'saved') {
     savedText =
@@ -1827,8 +1836,9 @@ function updateDraftBar(state) {
   draftBar.className = 'draft-bar' + (state === '' ? '' : ' is-' + state) + (showRestored ? ' is-restored' : '');
   setText(draftSavedText, savedText);
   draftContinue.hidden = !showRestored;
+  draftRestart.hidden = state === 'cleared'; // 지운 직후에는 다시 지울 내용이 없음
   if (!showRestored) {
-    setText(draftRestoredText, '');
+    setText(draftRestoredText, noticeText);
   }
 }
 
@@ -1840,8 +1850,9 @@ function saveDraft() {
 
   const draft = collectDraft();
 
-  // 완료 화면이거나, 시작 화면에서 아무것도 입력하지 않았으면 보관할 내용이 없음
-  if (currentStep === doneStep || (currentStep === 0 && !hasDraftValues(draft))) {
+  // 완료 화면이거나 아무것도 입력·선택하지 않았으면 보관할 내용이 없음
+  // (사용자 테스트 1차 뒤 변경: 빈 화면에 '임시 보관됨'이 떠서 무엇이 보관됐는지 헷갈리지 않게)
+  if (currentStep === doneStep || !hasDraftValues(draft)) {
     clearDraft();
     return;
   }
@@ -1850,10 +1861,12 @@ function saveDraft() {
     sessionStorage.setItem(draftKey, JSON.stringify(draft));
   } catch (error) {
     // 저장소 차단·용량 부족: 보관하지 못한다는 것을 알림
+    draftCleared = false;
     updateDraftBar('off');
     return;
   }
   draftSavedAt = draft.savedAt;
+  draftCleared = false; // 새로 입력하기 시작하면 지웠다는 안내 대신 보관 표시
   updateDraftBar('saved');
 }
 
@@ -1866,6 +1879,9 @@ function clearDraft() {
   }
   draftSavedAt = '';
   draftRestored = false;
+  if (currentStep === doneStep) {
+    draftCleared = false; // 완료 화면에서는 지웠다는 안내를 남기지 않음
+  }
   updateDraftBar('');
 }
 
@@ -1958,6 +1974,9 @@ function restoreDraft() {
   let message = '작성 중이던 ' + (plantName === '' ? '' : '‘' + plantName + '’ ') + '알림 신청을 불러왔어요. 아직 신청이 끝나지 않았어요. ';
   if (step === 0) {
     message += '‘등록 시작하기’를 누르면 입력한 내용이 그대로 있어요.';
+  } else if (step === confirmStep) {
+    // 확인 단계는 더 입력할 것이 없으므로 다음에 누를 버튼을 알려 줌 (사용자 테스트 1차 뒤 변경)
+    message += '내용을 확인하고 아래 ‘' + signupSubmit.textContent.trim() + '’를 누르면 신청이 끝나요.';
   } else {
     message += step + '단계 ‘' + progressItems[step - 1].textContent.trim() + '’부터 이어서 작성해 주세요.';
   }
@@ -1989,7 +2008,7 @@ function revealDraftBar() {
   }
 }
 
-// '이어서 작성하기': 복구 안내를 접고 작성 중이던 단계 제목으로 초점 이동
+// '안내 닫기': 복구 안내를 접고 작성 중이던 단계 제목으로 초점 이동 (누르지 않아도 그대로 이어서 작성할 수 있음)
 function continueDraft() {
   draftRestored = false;
   updateDraftBar('saved');
@@ -2011,10 +2030,13 @@ function askRestart() {
   askConfirm({
     opener: draftRestart,
     title: '작성하던 내용을 지우고 처음부터 다시 할까요?',
-    text: '입력한 식물 정보와 알림 설정, 임시 보관한 내용이 모두 지워지고 되돌릴 수 없어요.',
+    text: '지금 작성하던 식물 정보와 알림 설정(이메일·전화번호·시간)이 모두 지워지고 되돌릴 수 없어요. 이미 신청을 끝낸 식물은 내 식물 목록에 그대로 남아요.',
     okText: '지우고 다시 시작',
     closeLabel: '다시 작성 확인 창 닫기',
-    onConfirm: restartSignup,
+    onConfirm: function () {
+      draftCleared = true; // 시작 화면에 지웠다는 안내를 보여 줌
+      restartSignup();
+    },
   });
 }
 

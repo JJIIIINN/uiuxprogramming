@@ -1636,7 +1636,8 @@ footer {
   color: var(--grey-700);
 }
 
-.draft-bar.is-saved .draft-saved::before {
+.draft-bar.is-saved .draft-saved::before,
+.draft-bar.is-cleared .draft-restored::before {
   content: '✓ ';
   content: '✓ ' / '';
   color: var(--blue-600);
@@ -1693,6 +1694,12 @@ footer {
 
 .draft-bar.is-restored .text-button {
   background-color: var(--white);
+}
+
+/* 처음부터 다시 작성으로 지운 직후: 지웠다는 안내 (사용자 테스트 1차 뒤 추가) */
+.draft-bar.is-cleared .draft-restored {
+  color: var(--grey-900);
+  font-weight: 600;
 }
 
 /* 임시 보관을 쓸 수 없을 때: 주황 주의 안내 */
