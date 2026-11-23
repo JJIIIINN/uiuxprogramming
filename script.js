@@ -281,6 +281,8 @@ const confirmStep = 3;
 const doneStep = 4;
 let currentStep = 0;
 let isSubmitting = false;
+let isRestoring = false; // 13주차: 새로고침 뒤 복구하는 동안에는 임시 보관을 다시 하지 않음
+let draftRestored = false; // 13주차: 복구 안내를 보여 주는 중인지
 
 // 라디오 버튼 묶음에서 고른 값 (고르지 않았으면 빈 문자열)
 function getChecked(group) {
@@ -407,7 +409,8 @@ const validators = {
 };
 
 // 해당 단계 화면만 보이고 진행 표시 갱신
-function showStep(step) {
+// moveFocus가 false면 초점을 옮기지 않음 (13주차: 새로고침 뒤 복구할 때)
+function showStep(step, moveFocus) {
   currentStep = step;
 
   flowSteps.forEach(function (panel, index) {
@@ -431,7 +434,15 @@ function showStep(step) {
     alertBox.textContent = '';
   }
 
-  flowSteps[step].querySelector('h3').focus();
+  if (moveFocus !== false) {
+    flowSteps[step].querySelector('h3').focus();
+  }
+
+  // 13주차: 단계가 바뀔 때마다 임시 보관하고, 복구 안내는 다른 단계로 넘어가면 접음
+  if (!isRestoring) {
+    draftRestored = false;
+    saveDraft();
+  }
 }
 
 // 단계 아래 안내: 수정이 필요한 항목의 개수와 이름 (show가 false면 이미 보일 때만 갱신)
@@ -558,6 +569,9 @@ function handleLiveInput(event) {
   if (field !== null && field.dataset.touched === 'true') {
     validateField(field);
   }
+
+  // 13주차: 값을 입력하거나 고를 때마다 임시 보관
+  saveDraft();
 }
 
 // 입력칸을 벗어날 때: 값을 입력한 글자 입력칸은 그때부터 검사
@@ -676,6 +690,8 @@ function setSubmitting(on) {
     button.disabled = on;
   });
   signupForm.setAttribute('aria-busy', String(on));
+  // 13주차: 신청하는 중에는 '처음부터 다시 작성'도 잠금 (보내는 중에 값이 지워져 빈 신청이 저장되지 않게)
+  draftRestart.disabled = on;
 
   if (on) {
     signupSubmit.textContent = '신청하는 중…';
@@ -761,6 +777,11 @@ function finishSignup() {
   renderPlantList();
   setPlantMessage('‘' + signupName.value.trim() + '’ 식물을 목록에 추가했어요.', 'is-success');
 
+  // 13주차: 저장에 성공했으므로 임시 보관한 내용과 입력칸을 비움
+  // (완료 화면에서 새로고침해도 끝난 신청이 작성 중으로 되살아나지 않게)
+  clearDraft();
+  clearSignupInputs();
+
   showStep(doneStep);
 }
 
@@ -802,8 +823,8 @@ function handleFlowClick(event) {
   showStep(Number(button.dataset.goto));
 }
 
-// 처음부터 다시: 입력값·안내 문구·버튼 상태·조건부 영역·진행 상태 모두 초기화
-function restartSignup() {
+// 입력값·오류 안내·조건부 영역·글자 수·식물 찾기를 처음 상태로 (다시 시작할 때와 신청에 성공했을 때 함께 사용)
+function clearSignupInputs() {
   signupForm.reset();
 
   signupForm.querySelectorAll('.flow-field').forEach(function (field) {
@@ -817,6 +838,13 @@ function restartSignup() {
   updateNameCount();
   setCheck(emailCheck, '', '');
   setCheck(phoneCheck, '', '');
+  resetFinder();
+}
+
+// 처음부터 다시: 입력값·안내 문구·버튼 상태·조건부 영역·진행 상태·임시 보관한 내용 모두 초기화
+function restartSignup() {
+  clearDraft();
+  clearSignupInputs();
 
   hideSubmitStatus();
   signupSubmit.textContent = '알림 신청하기';
@@ -824,7 +852,6 @@ function restartSignup() {
     item.textContent = '';
   });
   doneMessage.textContent = '';
-  resetFinder();
 
   showStep(0);
 }
@@ -928,10 +955,14 @@ function findPlants(query) {
   });
 }
 
-function openFinder() {
+// moveFocus가 false면 초점을 옮기지 않음 (13주차: 새로고침 뒤 복구할 때)
+function openFinder(moveFocus) {
   finder.hidden = false;
   finderToggle.setAttribute('aria-expanded', 'true');
-  finderInput.focus();
+  if (moveFocus !== false) {
+    finderInput.focus();
+  }
+  saveDraft();
 }
 
 function closeFinder() {
@@ -944,11 +975,12 @@ function cancelFinder() {
   closeFinder();
   setTypeNote('식물 찾기를 닫았어요. 식물 종류는 그대로예요. 목록에서 고르거나 다시 찾아보세요.', 'info');
   finderToggle.focus();
+  saveDraft();
 }
 
 function toggleFinder() {
   if (finder.hidden) {
-    openFinder();
+    openFinder(true);
   } else {
     cancelFinder();
   }
@@ -1009,6 +1041,7 @@ function searchPlants() {
 
   clearFinderError();
   showResults(query, findPlants(query));
+  saveDraft();
 }
 
 // 한글 입력 중(조합 중) Enter는 무시하고, 입력이 끝난 Enter로 검색
@@ -1019,13 +1052,8 @@ function handleFinderKey(event) {
   }
 }
 
-// 고른 식물을 신청 흐름의 식물 종류에 반영하고 찾기 닫기
-function pickPlant(value) {
-  signupType.value = value;
-  foundPlant = value;
-  setFieldError(signupType, '');
-  closeFinder();
-
+// 식물 종류 아래에 '생김새로 찾은 식물' 안내 (찾기로 골랐을 때와 새로고침 뒤 복구할 때 함께 사용)
+function showFoundNote(value) {
   if (value === 'foliage') {
     setTypeNote('목록에 없는 식물이라 기타 관엽식물(기본 7일마다)로 등록했어요.', 'success');
   } else {
@@ -1035,7 +1063,17 @@ function pickPlant(value) {
       'success'
     );
   }
+}
+
+// 고른 식물을 신청 흐름의 식물 종류에 반영하고 찾기 닫기
+function pickPlant(value) {
+  signupType.value = value;
+  foundPlant = value;
+  setFieldError(signupType, '');
+  closeFinder();
+  showFoundNote(value);
   signupType.focus();
+  saveDraft();
 }
 
 // 찾기 영역 안의 예시 검색어·선택 버튼 처리
@@ -1454,6 +1492,7 @@ function handlePlantAction(event) {
     title: '‘' + name + '’' + pickJosa(name, '을', '를') + ' 목록에서 삭제할까요?',
     text: '삭제하면 이 식물의 물주기 알림과 물 준 기록이 함께 사라지고 되돌릴 수 없어요.',
     okText: '삭제하기',
+    closeLabel: '삭제 확인 창 닫기',
     onConfirm: function () {
       updatePlantRecord(id, removePlant);
     },
@@ -1582,11 +1621,13 @@ const confirmModal = document.querySelector('#confirm-modal');
 const confirmTitle = document.querySelector('#confirm-modal-title');
 const confirmText = document.querySelector('#confirm-modal-text');
 const confirmOk = document.querySelector('#confirm-modal-ok');
+const confirmClose = document.querySelector('#confirm-modal-close');
 
 function askConfirm(options) {
   confirmTitle.textContent = options.title;
   confirmText.textContent = options.text;
   confirmOk.textContent = options.okText;
+  confirmClose.setAttribute('aria-label', options.closeLabel || '확인 창 닫기'); // 13주차: 무엇을 닫는지도 쓰는 곳마다 다르게
   confirmModal.afterClose = function (result) {
     if (result === 'ok') {
       options.onConfirm();
@@ -1688,3 +1729,305 @@ function initAccordion(accordion) {
 }
 
 document.querySelectorAll('[data-accordion]').forEach(initAccordion);
+
+/* 11. 작성 중인 신청 임시 보관과 복구 (13주차)
+   - 입력값·선택값·진행 단계를 sessionStorage에 보관: 같은 탭을 새로고침하면 남고, 탭을 닫으면 지워짐
+   - 페이지를 열 때 보관한 내용이 있으면 작성 중이던 단계 화면과 안내를 복구
+   - 신청에 성공하거나 처음부터 다시 작성하면 임시값 삭제 (신청 기록은 localStorage에 따로 저장) */
+const draftKey = 'chorok-signup-draft';
+const draftVersion = 1;
+
+const draftBar = document.querySelector('#draft-bar');
+const draftRestoredText = document.querySelector('#draft-restored');
+const draftSavedText = document.querySelector('#draft-saved');
+const draftContinue = document.querySelector('#draft-continue');
+const draftRestart = document.querySelector('#draft-restart');
+
+let draftSavedAt = ''; // 마지막으로 임시 보관한 시각
+
+// 지금 화면의 입력값·선택값·진행 단계 모으기
+function collectDraft() {
+  return {
+    version: draftVersion,
+    step: currentStep,
+    name: signupName.value,
+    type: signupType.value,
+    place: getChecked(signupPlace),
+    email: signupEmail.value,
+    sms: signupSms.checked,
+    phone: signupPhone.value,
+    time: getChecked(signupTime),
+    customTime: signupCustomTime.value,
+    agree: signupAgree.checked,
+    foundPlant: foundPlant,
+    finderOpen: !finder.hidden,
+    finderQuery: finderInput.value,
+    finderSearched: finderStatus.textContent !== '',
+    savedAt: new Date().toISOString(),
+  };
+}
+
+// 입력하거나 고른 값이 하나라도 있는지 (진행 단계는 빼고)
+function hasDraftValues(draft) {
+  return (
+    draft.name !== '' || draft.type !== '' || draft.place !== '' || draft.email !== '' ||
+    draft.phone !== '' || draft.time !== '' || draft.customTime !== '' || draft.sms || draft.agree
+  );
+}
+
+// 보관한 내용 읽기 (없거나 깨졌으면 null)
+function readDraft() {
+  let draft = null;
+  try {
+    draft = JSON.parse(sessionStorage.getItem(draftKey));
+  } catch (error) {
+    // 저장소를 쓸 수 없거나 내용이 깨졌으면 보관한 내용이 없는 것으로 처리
+  }
+  if (draft === null || typeof draft !== 'object' || draft.version !== draftVersion) {
+    return null;
+  }
+  return draft;
+}
+
+// "2026-11-23T05:10:00.000Z" → "오후 2시 10분" (날짜가 아니면 빈 문자열)
+function formatSavedTime(savedAt) {
+  const date = new Date(savedAt);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  const hour = String(date.getHours()).padStart(2, '0');
+  const minute = String(date.getMinutes()).padStart(2, '0');
+  return formatTime(hour + ':' + minute);
+}
+
+// 문구가 바뀔 때만 다시 써서 화면 낭독기가 같은 안내를 되풀이해 읽지 않게
+function setText(target, text) {
+  if (target.textContent !== text) {
+    target.textContent = text;
+  }
+}
+
+// 임시 보관 표시줄 갱신. state: 'saved'(보관됨) · 'off'(보관할 수 없음) · ''(보관한 내용 없음 → 숨김)
+// 복구 직후(draftRestored)에는 복구 안내와 '이어서 작성하기' 버튼을 함께 보여 줌
+function updateDraftBar(state) {
+  const time = formatSavedTime(draftSavedAt);
+  let savedText = '';
+
+  if (state === 'saved') {
+    savedText =
+      '임시 보관됨' + (time === '' ? '' : ' · ' + time) +
+      ' · 이 탭을 새로고침해도 이어서 작성할 수 있어요.';
+  } else if (state === 'off') {
+    savedText =
+      '이 브라우저에서는 작성 내용을 임시 보관할 수 없어요. 새로고침하거나 탭을 닫으면 입력한 내용이 사라져요.';
+  }
+
+  const showRestored = draftRestored && state === 'saved';
+  draftBar.hidden = state === '';
+  draftBar.className = 'draft-bar' + (state === '' ? '' : ' is-' + state) + (showRestored ? ' is-restored' : '');
+  setText(draftSavedText, savedText);
+  draftContinue.hidden = !showRestored;
+  if (!showRestored) {
+    setText(draftRestoredText, '');
+  }
+}
+
+// 임시 보관: 값을 입력·선택하거나 단계가 바뀔 때마다 호출
+function saveDraft() {
+  if (isRestoring) {
+    return;
+  }
+
+  const draft = collectDraft();
+
+  // 완료 화면이거나, 시작 화면에서 아무것도 입력하지 않았으면 보관할 내용이 없음
+  if (currentStep === doneStep || (currentStep === 0 && !hasDraftValues(draft))) {
+    clearDraft();
+    return;
+  }
+
+  try {
+    sessionStorage.setItem(draftKey, JSON.stringify(draft));
+  } catch (error) {
+    // 저장소 차단·용량 부족: 보관하지 못한다는 것을 알림
+    updateDraftBar('off');
+    return;
+  }
+  draftSavedAt = draft.savedAt;
+  updateDraftBar('saved');
+}
+
+// 임시값 삭제: 신청에 성공했을 때와 처음부터 다시 작성할 때
+function clearDraft() {
+  try {
+    sessionStorage.removeItem(draftKey);
+  } catch (error) {
+    // 저장소를 쓸 수 없으면 지울 내용도 없음
+  }
+  draftSavedAt = '';
+  draftRestored = false;
+  updateDraftBar('');
+}
+
+// 보관한 값이 글자가 아니거나 너무 길면 걸러 냄
+function draftText(value, max) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  return value.slice(0, max);
+}
+
+// 라디오 버튼 묶음에서 값이 같은 항목을 선택 (없는 값이면 아무것도 선택하지 않음)
+function setChecked(group, value) {
+  group.querySelectorAll('input[type="radio"]').forEach(function (input) {
+    input.checked = input.value === value;
+  });
+}
+
+// 그 단계의 보이는 항목이 모두 조건에 맞는지 (오류 표시는 하지 않고 확인만)
+function isStepComplete(step) {
+  return Array.from(flowSteps[step].querySelectorAll('.flow-field')).every(function (field) {
+    return field.hidden || validators[field.dataset.field]() === '';
+  });
+}
+
+// 페이지를 열 때: 보관한 내용이 있으면 입력값·선택값·진행 단계·안내를 복구
+function restoreDraft() {
+  const draft = readDraft();
+  if (draft === null) {
+    clearDraft();
+    return;
+  }
+
+  isRestoring = true;
+
+  // 입력값·선택값 (선택 항목은 화면에 있는 값일 때만)
+  const type = draftText(draft.type, 20);
+  const hasType = Array.from(signupType.options).some(function (option) {
+    return option.value === type;
+  });
+  signupName.value = draftText(draft.name, 60);
+  signupType.value = hasType ? type : '';
+  setChecked(signupPlace, draft.place);
+  signupEmail.value = draftText(draft.email, 254);
+  signupSms.checked = draft.sms === true;
+  signupPhone.value = formatPhone(onlyDigits(draftText(draft.phone, 20)).slice(0, 11));
+  setChecked(signupTime, draft.time);
+  signupCustomTime.value = draftText(draft.customTime, 5);
+  signupAgree.checked = draft.agree === true;
+
+  // 값에 따라 달라지는 화면: 조건부 입력 영역, 글자 수, 입력 확인 문구
+  updateConditionalFields();
+  updateNameCount();
+  updateEmailCheck();
+  updatePhoneCheck();
+
+  // 생김새로 찾기: 찾아서 고른 식물 안내, 열려 있던 찾기 영역과 검색 결과
+  if (signupType.value !== '' && draft.foundPlant === signupType.value) {
+    foundPlant = signupType.value;
+    showFoundNote(foundPlant);
+  }
+  finderInput.value = draftText(draft.finderQuery, 40);
+  if (draft.finderOpen === true) {
+    openFinder(false);
+    if (draft.finderSearched === true && finderInput.value.trim() !== '') {
+      searchPlants();
+    }
+  }
+
+  // 진행 단계: 앞 단계에 빈 칸이나 오류가 있으면 그 단계부터 (보관한 내용이 깨졌어도 빈 확인 화면이 열리지 않게)
+  let step = 0;
+  if (Number.isInteger(draft.step) && draft.step >= 0 && draft.step <= confirmStep) {
+    step = draft.step;
+  }
+  for (let before = 1; before < step; before += 1) {
+    if (!isStepComplete(before)) {
+      step = before;
+      break;
+    }
+  }
+  if (step === confirmStep) {
+    fillSummary();
+  }
+  showStep(step, false);
+
+  isRestoring = false;
+
+  // 안내: 무엇을 불러왔는지, 아직 신청 전이라는 것, 어디서부터 이어서 하면 되는지
+  const plantName = signupName.value.trim();
+  let message = '작성 중이던 ' + (plantName === '' ? '' : '‘' + plantName + '’ ') + '알림 신청을 불러왔어요. 아직 신청이 끝나지 않았어요. ';
+  if (step === 0) {
+    message += '‘등록 시작하기’를 누르면 입력한 내용이 그대로 있어요.';
+  } else {
+    message += step + '단계 ‘' + progressItems[step - 1].textContent.trim() + '’부터 이어서 작성해 주세요.';
+  }
+
+  draftSavedAt = draftText(draft.savedAt, 30);
+  draftRestored = true;
+  updateDraftBar('saved');
+  setText(draftRestoredText, message);
+}
+
+// 복구한 직후: 신청 영역을 보고 있었다면 복구 안내가 보이게 하고 초점을 안내로 옮김
+// (다른 영역을 보다가 새로고침했다면 보던 위치를 그대로 둠)
+function revealDraftBar() {
+  // 이미 안내로 옮겼거나 사용자가 다른 곳을 조작하기 시작했으면 건드리지 않음
+  if (!draftRestored || document.activeElement !== document.body) {
+    return;
+  }
+
+  const area = signupForm.getBoundingClientRect();
+  if (area.bottom <= 0 || area.top >= window.innerHeight) {
+    return;
+  }
+
+  draftRestoredText.focus({ preventScroll: true });
+
+  const bar = draftBar.getBoundingClientRect();
+  if (bar.top < topbar.offsetHeight || bar.bottom > window.innerHeight) {
+    draftBar.scrollIntoView({ block: 'start', behavior: 'instant' });
+  }
+}
+
+// '이어서 작성하기': 복구 안내를 접고 작성 중이던 단계 제목으로 초점 이동
+function continueDraft() {
+  draftRestored = false;
+  updateDraftBar('saved');
+  flowSteps[currentStep].querySelector('h3').focus();
+}
+
+// '처음부터 다시 작성': 입력한 값이 있으면 지우기 전에 확인 모달을 먼저 띄움
+function askRestart() {
+  // 신청하는 중에는 지우지 않음
+  if (isSubmitting) {
+    return;
+  }
+
+  if (!hasDraftValues(collectDraft())) {
+    restartSignup();
+    return;
+  }
+
+  askConfirm({
+    opener: draftRestart,
+    title: '작성하던 내용을 지우고 처음부터 다시 할까요?',
+    text: '입력한 식물 정보와 알림 설정, 임시 보관한 내용이 모두 지워지고 되돌릴 수 없어요.',
+    okText: '지우고 다시 시작',
+    closeLabel: '다시 작성 확인 창 닫기',
+    onConfirm: restartSignup,
+  });
+}
+
+draftContinue.addEventListener('click', continueDraft);
+draftRestart.addEventListener('click', askRestart);
+
+restoreDraft();
+
+// 브라우저가 새로고침 전 스크롤 위치를 되돌린 다음에 복구 안내 위치를 확인
+// (스크롤 위치를 조금 늦게 되돌리는 경우를 위해 잠시 뒤 한 번 더 확인)
+window.addEventListener('pageshow', function (event) {
+  if (draftRestored && !event.persisted) {
+    requestAnimationFrame(revealDraftBar);
+    setTimeout(revealDraftBar, 400);
+  }
+});

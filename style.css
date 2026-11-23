@@ -1003,7 +1003,8 @@ nav a:focus-visible {
 
 /* 제출 중에 누를 수 없는 버튼은 흐리게 표시 */
 .button.secondary:disabled,
-.edit-button:disabled {
+.edit-button:disabled,
+.text-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -1597,6 +1598,118 @@ footer {
   background-color: var(--grey-100);
 }
 
+/* ===== 13주차: 작성 중인 신청 임시 보관 표시줄과 복구 안내 ===== */
+.draft-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: 0 0 12px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background-color: var(--white);
+  word-break: keep-all;
+  scroll-margin-top: 72px; /* 위쪽 진행 표시까지 함께 보이게 */
+}
+
+.draft-bar[hidden] {
+  display: none;
+}
+
+.draft-restored:focus {
+  outline: none;
+}
+
+.draft-text {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.draft-bar p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.draft-saved {
+  color: var(--grey-700);
+}
+
+.draft-bar.is-saved .draft-saved::before {
+  content: '✓ ';
+  content: '✓ ' / '';
+  color: var(--blue-600);
+  font-weight: 700;
+}
+
+.draft-restored:empty {
+  display: none;
+}
+
+.draft-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.draft-actions .text-button {
+  margin-top: 0;
+}
+
+/* 지우는 동작은 눈에 덜 띄게 (누르면 확인 모달이 먼저 열림) */
+.text-button.draft-restart {
+  color: var(--grey-700);
+  background-color: var(--grey-100);
+}
+
+.text-button.draft-restart:hover {
+  color: var(--grey-900);
+}
+
+/* 새로고침 뒤 복구 안내: 파란 상자와 왼쪽 막대, 굵은 안내 문구 */
+.draft-bar.is-restored {
+  padding: 16px 20px;
+  border-left: 4px solid var(--blue-500);
+  background-color: var(--blue-100);
+}
+
+.draft-bar.is-restored .draft-restored {
+  margin-bottom: 4px;
+  color: var(--grey-900);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.draft-bar.is-restored .draft-restored::before {
+  content: '↻ ';
+  content: '↻ ' / '';
+  color: var(--blue-700);
+}
+
+.draft-bar.is-restored .draft-saved {
+  color: var(--grey-800);
+}
+
+.draft-bar.is-restored .text-button {
+  background-color: var(--white);
+}
+
+/* 임시 보관을 쓸 수 없을 때: 주황 주의 안내 */
+.draft-bar.is-off {
+  background-color: var(--orange-50);
+}
+
+.draft-bar.is-off .draft-saved {
+  color: var(--orange-700);
+  font-weight: 600;
+}
+
+.draft-bar.is-off .draft-saved::before {
+  content: '⚠︎ ';
+  content: '⚠︎ ' / '주의: ';
+}
+
 /* --- 모달: <dialog class="modal"> + .modal-box ---
    열리면 뒤 화면을 어둡게(::backdrop) 덮고, 페이지 스크롤을 막음 */
 .modal {
@@ -1997,6 +2110,20 @@ body.is-modal-open {
 
   .flow-progress {
     gap: 6px;
+  }
+
+  .draft-bar {
+    scroll-margin-top: 56px;
+  }
+
+  .draft-bar.is-restored {
+    padding: 14px 16px;
+  }
+
+  .draft-actions,
+  .draft-actions .text-button {
+    width: 100%;
+    justify-content: center;
   }
 
   .flow-progress li {

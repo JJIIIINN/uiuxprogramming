@@ -301,6 +301,27 @@
         </ol>
 
         <form id="signup-form" novalidate>
+          <!-- 13주차: 작성 중인 신청의 임시 보관 상태와 새로고침 뒤 복구 안내 -->
+          <div id="draft-bar" class="draft-bar" hidden>
+            <div class="draft-text">
+              <p id="draft-restored" class="draft-restored" role="status" tabindex="-1"></p>
+              <p id="draft-saved" class="draft-saved"></p>
+            </div>
+            <div class="draft-actions">
+              <button type="button" class="text-button" id="draft-continue" hidden>
+                이어서 작성하기
+              </button>
+              <button
+                type="button"
+                class="text-button draft-restart"
+                id="draft-restart"
+                aria-haspopup="dialog"
+              >
+                처음부터 다시 작성
+              </button>
+            </div>
+          </div>
+
           <!-- 시작 -->
           <div class="flow-step flow-start">
             <h3 tabindex="-1">내 식물 등록하고 물주기 알림 받기</h3>
@@ -999,6 +1020,11 @@
                 브라우저에서는 보이지 않고, 브라우저의 사이트 데이터를 지우면 목록도
                 함께 지워져요.
               </p>
+              <p>
+                신청을 끝내기 전에 작성하던 내용은 지금 보고 있는 탭에만 임시로
+                보관돼요. 새로고침해도 이어서 작성할 수 있고, 신청을 마치거나
+                처음부터 다시 작성하거나 탭을 닫으면 지워져요.
+              </p>
             </div>
           </div>
         </div>
@@ -1072,7 +1098,8 @@
             type="button"
             class="modal-close"
             data-modal-close
-            aria-label="삭제 확인 창 닫기"
+            id="confirm-modal-close"
+            aria-label="확인 창 닫기"
           >
             <span aria-hidden="true">✕</span> 닫기
           </button>
